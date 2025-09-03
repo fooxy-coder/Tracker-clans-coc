@@ -1,0 +1,444 @@
+
+import requests
+import time
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+import os
+
+# Crear archivo HTML cada 3 minutos
+def actualizar():
+    # Tu código para obtener datos y crear HTML
+    with open('index.html', 'w', encoding='utf-8') as f:
+        f.write('<h1>SICARIA PERRITA MIAa!</h1>')
+
+actualizar()
+
+# Servidor simple
+server = HTTPServer(('localhost', 8080), SimpleHTTPRequestHandler)
+print("🌐 Servidor en: http://localhost:8080")
+server.serve_forever()
+import requests
+import json
+import time
+from datetime import datetime
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import socketserver
+import os
+
+# Configuración
+API_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6IjQ0MmM5NDI3LWRmZWUtNDUzOS05YzM3LTY0YTI4ZWQ3NWQ2YSIsImlhdCI6MTc1NDc4NzA4NCwic3ViIjoiZGV2ZWxvcGVyL2ZjNTE2YWY0LTA4YzUtYTUwYS1iNjA1LTA0NWJiN2Y2MWYxNyIsInNjb3BlcyI6WyJjbGFzaCJdLCJsaW1pdHMiOlt7InRpZXIiOiJkZXZlbG9wZXIvc2lsdmVyIiwidHlwZSI6InRocm90dGxpbmcifSx7ImNpZHJzIjpbIjE5MC40OC4xMTkuMTAwIl0sInR5cGUiOiJjbGllbnQifV19.wX0TqtjSP7HUxVs9cvopoFZk_5wp-fG70HOrQaF-EOBKgUUBYXySAU7GMfnOx8ivnqB3qgKv-Urb_S79dBEpQw"
+CLAN_TAG = "#22G8YL992"
+UPDATE_INTERVAL = 180  # 3 minutos
+
+# Variables globales para datos
+clan_data = {}
+last_update = "Iniciando..."
+
+def get_clan_data():
+    """Obtiene datos del clan desde la API"""
+    global clan_data, last_update
+    
+    headers = {
+        'Authorization': f'Bearer {API_TOKEN}',
+        'Accept': 'application/json'
+    }
+    
+    try:
+        url = f"https://api.clashofclans.com/v1/clans/{CLAN_TAG.replace('#', '%23')}"
+        print(f"🔍 Consultando API para clan {CLAN_TAG}...")
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            clan_data = response.json()
+            last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            print("✅ Datos obtenidos correctamente!")
+            return True
+        else:
+            print(f"❌ Error API: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error de conexión: {e}")
+        return False
+
+def generate_html():
+    """Genera el HTML con los datos actuales"""
+    if not clan_data:
+        return """
+        <html><body>
+        <h1>🔄 Cargando datos del clan...</h1>
+        <p>Esperando primera actualización...</p>
+        </body></html>
+        """
+    
+    # Ordenar miembros por donaciones
+    members = sorted(clan_data.get('memberList', []), 
+                    key=lambda x: x.get('donations', 0), reverse=True)
+    
+    # Generar filas de la tabla
+    member_rows = ""
+    for i, member in enumerate(members, 1):
+        emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "👤"
+        member_rows += f"""
+        <tr class="member-row">
+            <td class="rank">{emoji} {i}</td>
+            <td class="name">{member.get('name', 'N/A')}</td>
+            <td class="donations">{member.get('donations', 0):,}</td>
+            <td class="received">{member.get('donationsReceived', 0):,}</td>
+            <td class="role">{member.get('role', 'N/A')}</td>
+        </tr>
+        """
+    
+    total_donations = sum(member.get('donations', 0) for member in members)
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>🏆 {clan_data.get('name', 'Clan')} - Tracker de Donaciones</title>
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            
+            body {{
+                font-family: 'Arial', sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }}
+            
+            .container {{
+                max-width: 1200px;
+                margin: 0 auto;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                overflow: hidden;
+                backdrop-filter: blur(10px);
+            }}
+            
+
+            .header {{
+                background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+                color: white;
+                padding: 30px;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+            }}
+            
+            .header::before {{
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);
+                animation: float 20s infinite linear;
+            }}
+            
+            @keyframes float {{
+                0% {{ transform: translate(-50%, -50%) rotate(0deg); }}
+                100% {{ transform: translate(-50%, -50%) rotate(360deg); }}
+            }}
+            
+            .clan-name {{
+                font-size: 2.5em;
+                font-weight: bold;
+                margin-bottom: 10px;
+                position: relative;
+                z-index: 2;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            }}
+            
+            .clan-info {{
+                position: relative;
+                z-index: 2;
+                opacity: 0.9;
+            }}
+            
+            .stats {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                padding: 30px;
+                background: #f8f9fa;
+            }}
+            
+            .stat-card {{
+                background: white;
+                padding: 20px;
+                border-radius: 15px;
+                text-align: center;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }}
+            
+            .stat-card:hover {{
+                transform: translateY(-5px);
+                box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+            }}
+            
+            .stat-value {{
+                font-size: 2em;
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 5px;
+            }}
+            
+            .stat-label {{
+                color: #666;
+                font-size: 0.9em;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }}
+            
+            .members-section {{
+                padding: 30px;
+            }}
+            
+            .section-title {{
+                font-size: 1.8em;
+                color: #333;
+                margin-bottom: 20px;
+                text-align: center;
+                position: relative;
+            }}
+            
+            .section-title::after {{
+                content: '';
+                display: block;
+                width: 100px;
+                height: 3px;
+                background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+                margin: 10px auto;
+                border-radius: 2px;
+            }}
+            
+            .table-container {{
+                overflow-x: auto;
+                border-radius: 15px;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            }}
+            
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                background: white;
+            }}
+            
+            th {{
+                background: linear-gradient(45deg, #667eea, #764ba2);
+                color: white;
+                padding: 15px;
+                text-align: left;
+                font-weight: bold;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-size: 0.9em;
+            }}
+            
+            .member-row {{
+                transition: all 0.3s ease;
+                border-bottom: 1px solid #eee;
+            }}
+            
+            .member-row:hover {{
+                background: linear-gradient(45deg, #f8f9ff, #fff8f8);
+                transform: scale(1.01);
+            }}
+            
+            td {{
+                padding: 15px;
+                border-bottom: 1px solid #eee;
+            }}
+            
+            .rank {{
+                font-weight: bold;
+                color: #333;
+                width: 80px;
+            }}
+            
+            .name {{
+                font-weight: bold;
+                color: #444;
+            }}
+            
+            .donations {{
+                color: #27ae60;
+                font-weight: bold;
+                font-size: 1.1em;
+            }}
+            
+            .received {{
+                color: #e74c3c;
+                font-weight: bold;
+            }}
+            
+            .role {{
+                color: #8e44ad;
+                font-weight: bold;
+                text-transform: capitalize;
+            }}
+            
+            .footer {{
+                background: #2c3e50;
+                color: white;
+                padding: 20px;
+                text-align: center;
+            }}
+            
+            .update-info {{
+                opacity: 0.8;
+                font-size: 0.9em;
+            }}
+            
+            .auto-refresh {{
+                background: #27ae60;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 25px;
+                display: inline-block;
+                margin-top: 10px;
+                font-size: 0.9em;
+                animation: pulse 2s infinite;
+            }}
+            
+            @keyframes pulse {{
+                0%, 100% {{ opacity: 1; }}
+                50% {{ opacity: 0.7; }}
+            }}
+            
+            @media (max-width: 768px) {{
+                .clan-name {{ font-size: 2em; }}
+                .stats {{ grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }}
+                table {{ font-size: 0.9em; }}
+                td, th {{ padding: 10px; }}
+            }}
+        </style>
+        <script>
+            // Auto-refresh cada 3 minutos
+            setTimeout(function() {{
+                window.location.reload();
+            }}, 180000);
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="clan-name">🏆 {clan_data.get('name', 'Clan Desconocido')}</div>
+                <div class="clan-info">
+                    <p>📊 Tracker de Donaciones en Tiempo Real</p>
+                    <p>🏷️ Tag: {clan_data.get('tag', 'N/A')}</p>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value">💎 {total_donations:,}</div>
+                    <div class="stat-label">Total Donaciones</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">👥 {len(members)}</div>
+                    <div class="stat-label">Miembros Activos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">⭐ {clan_data.get('clanLevel', 'N/A')}</div>
+                    <div class="stat-label">Nivel del Clan</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">🏆 {clan_data.get('clanPoints', 0):,}</div>
+                    <div class="stat-label">Puntos del Clan</div>
+                </div>
+            </div>
+            
+            <div class="members-section">
+                <h2 class="section-title">🥇 Ranking de Donaciones</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>🏅 Posición</th>
+                                <th>👤 Jugador</th>
+                                <th>💎 Donadas</th>
+                                <th>📥 Recibidas</th>
+                                <th>👑 Rol</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {member_rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <div class="update-info">
+                    🕒 Última actualización: {last_update}
+                </div>
+                <div class="auto-refresh">
+                    🔄 Actualización automática en 3 minutos
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html
+
+class ClashHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html; charset=utf-8')
+        self.end_headers()
+        
+        html = generate_html()
+        self.wfile.write(html.encode('utf-8'))
+    
+    def log_message(self, format, *args):
+        # Silenciar logs del servidor
+        pass
+
+def update_data():
+    """Actualiza los datos cada cierto tiempo"""
+    while True:
+        get_clan_data()
+        time.sleep(UPDATE_INTERVAL)
+
+def main():
+    print("🚀 Iniciando Clash of Clans Donations Tracker WEB...")
+    print("📡 Configurando servidor web...")
+    
+    # Primera carga de datos
+    get_clan_data()
+    
+    # Iniciar hilo para actualizaciones automáticas
+    update_thread = threading.Thread(target=update_data, daemon=True)
+    update_thread.start()
+    print("🔄 Sistema de actualización automática iniciado!")
+    
+    # Configurar servidor web
+    PORT = 8080
+    server = HTTPServer(('localhost', PORT), ClashHandler)
+    
+    print(f"🌐 Servidor iniciado en: http://localhost:{PORT}")
+    print("✅ ¡Todo listo! Abrí tu navegador y andá a:")
+    print(f"   📱 http://localhost:{PORT}")
+    print("🔄 La página se actualiza automáticamente cada 3 minutos")
+    print("⚠️  Para detener el servidor: Ctrl + C")
+    print("-" * 60)
+    
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\n🛑 Deteniendo servidor...")
+        server.shutdown()
+        print("✅ Servidor detenido correctamente!")
+
+if __name__ == "__main__":
+    main()
+rm web_tracker.py

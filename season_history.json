@@ -1,0 +1,11 @@
+{
+  "last_save": "2025-08-25T04:32:58.282259-03:00",
+  "version": "5.0_season_detection",
+  "total_seasons": 0,
+  "last_season_reset": null,
+  "detection_config": {
+    "reset_threshold": 0.1,
+    "min_clans_for_detection": 2
+  },
+  "history": {}
+}

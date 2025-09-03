@@ -1,0 +1,965 @@
+{
+  "last_save": "2025-08-29T07:47:10.739427-03:00",
+  "version": "5.0_with_season_detection",
+  "total_months": 1,
+  "history": {
+    "2025-08": {
+      "month_key": "2025-08",
+      "month_name": "August 2025",
+      "timestamp": "2025-08-29T07:47:09.014344-03:00",
+      "auto_save_number": 109,
+      "clans": {
+        "22G8YL992": {
+          "name": "req n go",
+          "leader": "ㅤㅤFoxx!ㅤㅤ",
+          "members": 49,
+          "totalDonations": 1608069,
+          "totalReceived": 824869,
+          "last_update": "2025-08-29T07:47:09.014344-03:00",
+          "players": [
+            {
+              "tag": "#8CLLG2GQU",
+              "name": "JEREMY",
+              "donations": 1960,
+              "donationsReceived": 0,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 5039,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#Q2C8YYY0",
+              "name": "⚡️Spider Brrr ツ",
+              "donations": 89884,
+              "donationsReceived": 7208,
+              "dailyDonations": 5248,
+              "dailyReceived": 0,
+              "trophies": 4752,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#2GUV299LL",
+              "name": "BKㅤ❤️IRIS❤️",
+              "donations": 133101,
+              "donationsReceived": 5636,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 4711,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GYPRVVJ0L",
+              "name": "BK ⚜️PEDRO⚜️",
+              "donations": 235947,
+              "donationsReceived": 1087,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 3706,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#LRPUG0L99",
+              "name": "⚡Sicarius AR™⚡",
+              "donations": 547177,
+              "donationsReceived": 1813,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 2731,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#Q0PC8QGQV",
+              "name": "ㅤㅤFoxx!ㅤㅤ",
+              "donations": 600000,
+              "donationsReceived": 4453,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 1950,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GG29GVVCG",
+              "name": "req18",
+              "donations": 0,
+              "donationsReceived": 19800,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 973,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJRCR8RQJ",
+              "name": "req17",
+              "donations": 0,
+              "donationsReceived": 19728,
+              "dailyDonations": 0,
+              "dailyReceived": 792,
+              "trophies": 955,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJJ82PCRY",
+              "name": "req41",
+              "donations": 0,
+              "donationsReceived": 20264,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 938,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJL8GRCRC",
+              "name": "req26",
+              "donations": 0,
+              "donationsReceived": 20088,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 938,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJYJV2PJP",
+              "name": "req21",
+              "donations": 0,
+              "donationsReceived": 20304,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 935,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJ89C0G8U",
+              "name": "req4",
+              "donations": 0,
+              "donationsReceived": 19986,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 933,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGUPVCQVG",
+              "name": "req13",
+              "donations": 0,
+              "donationsReceived": 19944,
+              "dailyDonations": 0,
+              "dailyReceived": 792,
+              "trophies": 931,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GUVQQ90PR",
+              "name": "req9",
+              "donations": 0,
+              "donationsReceived": 19728,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 930,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJRUYUGYP",
+              "name": "req24",
+              "donations": 0,
+              "donationsReceived": 20192,
+              "dailyDonations": 0,
+              "dailyReceived": 896,
+              "trophies": 929,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GP9RL20YG",
+              "name": "req34",
+              "donations": 0,
+              "donationsReceived": 20264,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 928,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GPYJ2LPJR",
+              "name": "req28",
+              "donations": 0,
+              "donationsReceived": 20336,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 926,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GG2YQJ2Y9",
+              "name": "req8",
+              "donations": 0,
+              "donationsReceived": 19872,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 926,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GUP0VP0JG",
+              "name": "req20",
+              "donations": 0,
+              "donationsReceived": 19872,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 925,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GU0VGCRRJ",
+              "name": "req33",
+              "donations": 0,
+              "donationsReceived": 20408,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 922,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GLRPRUYY0",
+              "name": "req40",
+              "donations": 0,
+              "donationsReceived": 20336,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 918,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GLCPJ2CL0",
+              "name": "req25",
+              "donations": 0,
+              "donationsReceived": 19800,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 916,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GG0G00LVV",
+              "name": "req37",
+              "donations": 0,
+              "donationsReceived": 20336,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 913,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#G99RQ8QCC",
+              "name": "req35",
+              "donations": 0,
+              "donationsReceived": 20048,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 911,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GG2JCC0UC",
+              "name": "req10",
+              "donations": 0,
+              "donationsReceived": 20088,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 911,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJPLRVY8P",
+              "name": "req22",
+              "donations": 0,
+              "donationsReceived": 20234,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 909,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GRJV8YCC9",
+              "name": "req30",
+              "donations": 0,
+              "donationsReceived": 20480,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 908,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GUVGLQVCP",
+              "name": "req23",
+              "donations": 0,
+              "donationsReceived": 20088,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 908,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GUVPR0V0P",
+              "name": "req32",
+              "donations": 0,
+              "donationsReceived": 20264,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 907,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GLRG2JRCJ",
+              "name": "req27",
+              "donations": 0,
+              "donationsReceived": 20192,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 903,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GG20C0GPL",
+              "name": "req2",
+              "donations": 0,
+              "donationsReceived": 20304,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 895,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJL9Q2JP8",
+              "name": "req5",
+              "donations": 0,
+              "donationsReceived": 19976,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 894,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJ80CJJ80",
+              "name": "req3",
+              "donations": 0,
+              "donationsReceived": 20376,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 893,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GUR9LGG8L",
+              "name": "req15",
+              "donations": 0,
+              "donationsReceived": 20088,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 892,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJLL0Y8YL",
+              "name": "req19",
+              "donations": 0,
+              "donationsReceived": 20088,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 891,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGUG2QJJY",
+              "name": "req16",
+              "donations": 0,
+              "donationsReceived": 20016,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 891,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJYCYGJJ2",
+              "name": "req14",
+              "donations": 0,
+              "donationsReceived": 19904,
+              "dailyDonations": 0,
+              "dailyReceived": 824,
+              "trophies": 888,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GU0C88Y9Q",
+              "name": "req11",
+              "donations": 0,
+              "donationsReceived": 19902,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 887,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GQCQLCPQP",
+              "name": "Sic∆rius⚡15",
+              "donations": 0,
+              "donationsReceived": 0,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 884,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GLRG8VYGU",
+              "name": "req38",
+              "donations": 0,
+              "donationsReceived": 20480,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 881,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJRLCP08Q",
+              "name": "req7",
+              "donations": 0,
+              "donationsReceived": 19728,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 881,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GUR0CJYYP",
+              "name": "req12",
+              "donations": 0,
+              "donationsReceived": 20046,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 881,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJ8P0CJRJ",
+              "name": "req31",
+              "donations": 0,
+              "donationsReceived": 20480,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 879,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GUP0JUY9L",
+              "name": "req6",
+              "donations": 0,
+              "donationsReceived": 19872,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 877,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GG29J9888",
+              "name": "req29",
+              "donations": 0,
+              "donationsReceived": 20336,
+              "dailyDonations": 0,
+              "dailyReceived": 864,
+              "trophies": 876,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GLCG28P0L",
+              "name": "req39",
+              "donations": 0,
+              "donationsReceived": 20376,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 875,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GRQP9LUCU",
+              "name": "req36",
+              "donations": 0,
+              "donationsReceived": 20048,
+              "dailyDonations": 0,
+              "dailyReceived": 936,
+              "trophies": 868,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GL0QYQVV2",
+              "name": "La kakis♥️",
+              "donations": 0,
+              "donationsReceived": 0,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 680,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GQCUVVRLY",
+              "name": "FLYNG #12",
+              "donations": 0,
+              "donationsReceived": 0,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 566,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            }
+          ]
+        },
+        "9PCULGVU": {
+          "name": "PIDE Y VETE",
+          "leader": "Smok☯️",
+          "members": 44,
+          "totalDonations": 894075,
+          "totalReceived": 871607,
+          "last_update": "2025-08-29T07:47:09.014344-03:00",
+          "players": [
+            {
+              "tag": "#QG00RG0VG",
+              "name": "Smok☯️",
+              "donations": 0,
+              "donationsReceived": 3473,
+              "dailyDonations": 0,
+              "dailyReceived": 232,
+              "trophies": 5495,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#22PPYPLGP",
+              "name": "Scary☯️",
+              "donations": 66432,
+              "donationsReceived": 415,
+              "dailyDonations": 25006,
+              "dailyReceived": 0,
+              "trophies": 4657,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#2LPQQPCQJ",
+              "name": "Trick☯️",
+              "donations": 188993,
+              "donationsReceived": 3244,
+              "dailyDonations": 8613,
+              "dailyReceived": 118,
+              "trophies": 3992,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#YVJ2PJPCU",
+              "name": "BOYKA G.O.A.T☯️",
+              "donations": 2383,
+              "donationsReceived": 565,
+              "dailyDonations": 174,
+              "dailyReceived": 0,
+              "trophies": 3931,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#Q2QJ2V8LV",
+              "name": "Nicol☯️",
+              "donations": 126702,
+              "donationsReceived": 1669,
+              "dailyDonations": 118,
+              "dailyReceived": 83,
+              "trophies": 3685,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#2U8CJPJ00",
+              "name": "Boyka☯️",
+              "donations": 289986,
+              "donationsReceived": 288,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 3545,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#8CJULQ0YQ",
+              "name": "El Diablo☯️",
+              "donations": 53314,
+              "donationsReceived": 1356,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 3151,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#L8LJ0C9UP",
+              "name": "Dani☯️",
+              "donations": 11526,
+              "donationsReceived": 236,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 2744,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#LGU299R0P",
+              "name": "Jon Snow☯️",
+              "donations": 75000,
+              "donationsReceived": 2478,
+              "dailyDonations": 2908,
+              "dailyReceived": 0,
+              "trophies": 2470,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#L8CCUYQ0Y",
+              "name": "Bruno☯️",
+              "donations": 79739,
+              "donationsReceived": 5085,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 2411,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#G2LULYY0Q",
+              "name": "SMOK xp_3☯️",
+              "donations": 0,
+              "donationsReceived": 24747,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 2345,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#QV9VGRYC8",
+              "name": "SMOK xp_5☯️",
+              "donations": 0,
+              "donationsReceived": 24900,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 2311,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GPUYQPYVJ",
+              "name": "SMOK xp_4☯️",
+              "donations": 0,
+              "donationsReceived": 24860,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 2119,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#G822Q9YJV",
+              "name": "SMOK xp_2☯️",
+              "donations": 0,
+              "donationsReceived": 24747,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 2101,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#G298U82Q2",
+              "name": "SMOK xp_1☯️",
+              "donations": 0,
+              "donationsReceived": 24860,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 1962,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#G0C22ULQ8",
+              "name": "SMOK xp_8☯️",
+              "donations": 0,
+              "donationsReceived": 24860,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 1816,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GPRLYJLCL",
+              "name": "SMOK xp_6☯️",
+              "donations": 0,
+              "donationsReceived": 24747,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 1749,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGR0PUQU9",
+              "name": "SMOK xp_19☯️",
+              "donations": 0,
+              "donationsReceived": 25764,
+              "dailyDonations": 0,
+              "dailyReceived": 904,
+              "trophies": 1739,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGVQY0YU9",
+              "name": "SMOK xp_10☯️",
+              "donations": 0,
+              "donationsReceived": 25312,
+              "dailyDonations": 0,
+              "dailyReceived": 1243,
+              "trophies": 1723,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GQY8G2VCJ",
+              "name": "SMOK xp_17☯️",
+              "donations": 0,
+              "donationsReceived": 25425,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1681,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGUU0J2VG",
+              "name": "SMOK xp_13☯️",
+              "donations": 0,
+              "donationsReceived": 25425,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1660,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGUYCR9YG",
+              "name": "SMOK xp_24☯️",
+              "donations": 0,
+              "donationsReceived": 24521,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 1557,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGGVUJ22L",
+              "name": "SMOK xp_9☯️",
+              "donations": 0,
+              "donationsReceived": 25146,
+              "dailyDonations": 0,
+              "dailyReceived": 1243,
+              "trophies": 1539,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJPVG0G9C",
+              "name": "SMOK xp_16☯️",
+              "donations": 0,
+              "donationsReceived": 25538,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1523,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GR09GC889",
+              "name": "SMOK xp_26☯️",
+              "donations": 0,
+              "donationsReceived": 24521,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1512,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GCJ9JG0P9",
+              "name": "SMOK xp_22☯️",
+              "donations": 0,
+              "donationsReceived": 25199,
+              "dailyDonations": 0,
+              "dailyReceived": 1243,
+              "trophies": 1496,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GQGYP09CV",
+              "name": "SMOK xp_12☯️",
+              "donations": 0,
+              "donationsReceived": 25086,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1480,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGRCCYR2V",
+              "name": "SMOK xp_27☯️",
+              "donations": 0,
+              "donationsReceived": 24521,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1480,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GCYRVJGR9",
+              "name": "SMOK xp_20☯️",
+              "donations": 0,
+              "donationsReceived": 25651,
+              "dailyDonations": 0,
+              "dailyReceived": 904,
+              "trophies": 1438,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GYG0CPYG9",
+              "name": "SMOK xp_33☯️",
+              "donations": 0,
+              "donationsReceived": 24860,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1438,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGRCYGU0L",
+              "name": "SMOK xp_25☯️",
+              "donations": 0,
+              "donationsReceived": 24634,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 1428,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GG9VLUR2P",
+              "name": "SMOK xp_21☯️",
+              "donations": 0,
+              "donationsReceived": 25425,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 1425,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#LJJQCG2YL",
+              "name": "SMOK xp_7☯️",
+              "donations": 0,
+              "donationsReceived": 24634,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 1421,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGJQY0JR9",
+              "name": "SMOK xp_30☯️",
+              "donations": 0,
+              "donationsReceived": 25312,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 1404,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGG8R0GUJ",
+              "name": "SMOK xp_32☯️",
+              "donations": 0,
+              "donationsReceived": 25199,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1399,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GJV89PYLQ",
+              "name": "SMOK xp_28☯️",
+              "donations": 0,
+              "donationsReceived": 24747,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1394,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GG09U2LG2",
+              "name": "SMOK xp_15☯️",
+              "donations": 0,
+              "donationsReceived": 25651,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1364,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GRLCYQ2Q2",
+              "name": "SMOK xp_23☯️",
+              "donations": 0,
+              "donationsReceived": 25199,
+              "dailyDonations": 0,
+              "dailyReceived": 1243,
+              "trophies": 1350,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GCYLJUJLU",
+              "name": "SMOK xp_29☯️",
+              "donations": 0,
+              "donationsReceived": 24973,
+              "dailyDonations": 0,
+              "dailyReceived": 904,
+              "trophies": 1349,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGRJRU282",
+              "name": "SMOK xp_34☯️",
+              "donations": 0,
+              "donationsReceived": 24860,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1345,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#G8QUG02CJ",
+              "name": "SMOK xp_11☯️",
+              "donations": 0,
+              "donationsReceived": 25312,
+              "dailyDonations": 0,
+              "dailyReceived": 1017,
+              "trophies": 1305,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GG8QCPJPP",
+              "name": "SMOK xp_14☯️",
+              "donations": 0,
+              "donationsReceived": 25425,
+              "dailyDonations": 0,
+              "dailyReceived": 904,
+              "trophies": 1295,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GQCJCLG9L",
+              "name": "SMOK xp_18☯️",
+              "donations": 0,
+              "donationsReceived": 25764,
+              "dailyDonations": 0,
+              "dailyReceived": 904,
+              "trophies": 1250,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            },
+            {
+              "tag": "#GGCULJ0L8",
+              "name": "SMOK xp_31☯️",
+              "donations": 0,
+              "donationsReceived": 24973,
+              "dailyDonations": 0,
+              "dailyReceived": 1130,
+              "trophies": 1231,
+              "last_update": "2025-08-29T07:47:09.014344-03:00"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

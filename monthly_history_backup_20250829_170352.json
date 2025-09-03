@@ -1,0 +1,55 @@
+{
+  "last_save": "2025-08-29T17:02:39.192664-03:00",
+  "version": "5.0_with_season_detection",
+  "total_months": 1,
+  "history": {
+    "2025-08": {
+      "month_key": "2025-08",
+      "month_name": "August 2025",
+      "timestamp": "2025-08-29T17:02:31.862854-03:00",
+      "auto_save_number": 249,
+      "clans": {
+        "22G8YL992": {
+          "name": "req n go",
+          "leader": "Leader Respaldo",
+          "members": 1,
+          "totalDonations": 0,
+          "totalReceived": 0,
+          "last_update": "2025-08-29T17:02:31.862854-03:00",
+          "players": [
+            {
+              "tag": "BACKUP1",
+              "name": "Datos de respaldo",
+              "donations": 0,
+              "donationsReceived": 0,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 0,
+              "last_update": "2025-08-29T17:02:31.862854-03:00"
+            }
+          ]
+        },
+        "9PCULGVU": {
+          "name": "Mi Nuevo Clan",
+          "leader": "Leader Respaldo",
+          "members": 1,
+          "totalDonations": 0,
+          "totalReceived": 0,
+          "last_update": "2025-08-29T17:02:31.862854-03:00",
+          "players": [
+            {
+              "tag": "BACKUP1",
+              "name": "Datos de respaldo",
+              "donations": 0,
+              "donationsReceived": 0,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 0,
+              "last_update": "2025-08-29T17:02:31.862854-03:00"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

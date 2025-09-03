@@ -1,0 +1,19 @@
+{
+  "name": "clanes-coc",
+  "version": "1.0.0",
+  "description": "Página de requisitos para clanes COC",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

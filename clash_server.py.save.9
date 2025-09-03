@@ -1,0 +1,704 @@
+#!/usr/bin/env python3
+import http.server
+import socketserver
+import urllib.request
+import urllib.parse
+import json
+import os
+import socket
+from datetime import datetime, timezone, timedelta
+
+# Configuración del puerto
+PORT = 8000
+
+def load_clans():
+    """Devuelve la lista de clanes disponibles"""
+    return {
+        "2LJULC0Q": "REQUEST & LEAVE",
+        "2L39P0GJL": "req", 
+        "LQ9GZ2J9": "Req and Leave",
+        "PZ42ZK0U": "Req n Leave",
+        "2L989PUPG": "Req and leave",
+        "899VUPLL": "TROPAS 0800",
+        "YY2L0YQL": "REQUEST N LEAVE",
+        "G0Q80CR9": "Req",
+        "0LVR0LCC": "Req N Leave",
+        "YGUCPR6G": "Req"
+    }
+
+def get_clan_data(clan_tag):
+    """Devuelve datos simulados de un clan específico"""
+    
+    # Datos simulados más realistas para cada clan
+    clan_database = {
+        "2LJULC0Q": {
+            "name": "REQUEST & LEAVE",
+            "members": 50,
+            "leader": "Kilian™",
+            "totalDonations": 21631968,
+            "totalReceived": 334867,
+            "memberList": [
+                {"tag": "PLAYER1", "name": "Kilian™", "donations": 15000, "donationsReceived": 2800, "trophies": 6200, "dailyDonations": 450},
+                {"tag": "PLAYER2", "name": "Alex Pro", "donations": 12500, "donationsReceived": 3100, "trophies": 5800, "dailyDonations": 380},
+                {"tag": "PLAYER3", "name": "Mario Boss", "donations": 11200, "donationsReceived": 2400, "trophies": 5500, "dailyDonations": 320},
+                {"tag": "PLAYER4", "name": "Luna Star", "donations": 9800, "donationsReceived": 2900, "trophies": 5200, "dailyDonations": 290},
+                {"tag": "PLAYER5", "name": "Pedro King", "donations": 8500, "donationsReceived": 1800, "trophies": 4900, "dailyDonations": 250},
+                {"tag": "PLAYER6", "name": "Sofia Queen", "donations": 7200, "donationsReceived": 2100, "trophies": 4600, "dailyDonations": 220},
+                {"tag": "PLAYER7", "name": "Carlos Ace", "donations": 6800, "donationsReceived": 1900, "trophies": 4400, "dailyDonations": 200}
+            ]
+        },
+        "2L39P0GJL": {
+            "name": "req",
+            "members": 47,
+            "leader": "SMILE",
+            "totalDonations": 17291560,
+            "totalReceived": 361527,
+            "memberList": [
+                {"tag": "REQ1", "name": "SMILE", "donations": 13000, "donationsReceived": 2200, "trophies": 5900, "dailyDonations": 400},
+                {"tag": "REQ2", "name": "Thunder", "donations": 10500, "donationsReceived": 2800, "trophies": 5400, "dailyDonations": 350},
+                {"tag": "REQ3", "name": "Lightning", "donations": 9200, "donationsReceived": 2100, "trophies": 5100, "dailyDonations": 280}
+            ]
+        }
+    }
+    
+    return clan_database.get(clan_tag, {
+        "name": "Demo Clan",
+        "members": 50,
+        "leader": "Demo Leader",
+        "totalDonations": 1000000,
+        "totalReceived": 50000,
+        "memberList": [
+            {"tag": "DEMO1", "name": "Demo Player 1", "donations": 1500, "donationsReceived": 800, "trophies": 5000, "dailyDonations": 50},
+            {"tag": "DEMO2", "name": "Demo Player 2", "donations": 1200, "donationsReceived": 600, "trophies": 4800, "dailyDonations": 45}
+        ]
+    })
+
+def process_clans_ranking():
+    """Procesa y ordena los clanes por donaciones totales"""
+    clans = load_clans()
+    ranking = []
+    
+    rank = 1
+    for clan_tag, clan_name in clans.items():
+        clan_data = get_clan_data(clan_tag)
+        ranking.append({
+            "rank": rank,
+            "tag": clan_tag,
+            "name": clan_data["name"],
+            "leader": clan_data["leader"],
+            "totalDonations": clan_data["totalDonations"],
+            "totalReceived": clan_data["totalReceived"],
+            "members": clan_data["members"]
+        })
+        rank += 1
+    
+    # Ordenar por donaciones totales (descendente)
+    ranking.sort(key=lambda x: x["totalDonations"], reverse=True)
+    
+    # Reajustar rankings después del ordenamiento
+    for i, clan in enumerate(ranking):
+        clan["rank"] = i + 1
+    
+    return ranking
+
+HTML_PAGE = '''<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOP REQ CLANS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .header {
+            background: #1a1a1a;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .logo .top { color: #ff6b35; }
+        .logo .req { color: #ff1744; }
+        .logo .clans { color: #ff6b35; }
+        
+        .nav {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+        
+        .nav a {
+            color: #ccc;
+            text-decoration: none;
+            padding: 5px 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            min-height: calc(100vh - 60px);
+        }
+        
+        .main-view {
+            padding: 20px;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .update-info {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .clans-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .clans-table th {
+            background: #f8f9fa;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 14px;
+            color: #495057;
+        }
+        
+        .clans-table th:first-child {
+            width: 40px;
+            text-align: center;
+        }
+        
+        .clans-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f1f1;
+            vertical-align: middle;
+        }
+        
+        .clans-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .clans-table tr:hover {
+            background: #e3f2fd;
+            cursor: pointer;
+        }
+        
+        .clan-rank {
+            text-align: center;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .clan-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .clan-badge {
+            width: 32px;
+            height: 32px;
+            background: #6c5ce7;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .clan-details h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: #333;
+        }
+        
+        .clan-tag {
+            font-size: 11px;
+            color: #666;
+            font-family: monospace;
+        }
+        
+        .leader-name {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .donations-number {
+            font-weight: 600;
+            color: #2e7d32;
+            text-align: right;
+        }
+        
+        .received-number {
+            font-weight: 600;
+            color: #d32f2f;
+            text-align: right;
+        }
+        
+        .clan-detail-view {
+            display: none;
+            padding: 20px;
+        }
+        
+        .back-button {
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .clan-header {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .clan-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .clan-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-button.active {
+            background: #6c5ce7;
+            color: white;
+        }
+        
+        .players-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .players-table th {
+            background: #f8f9fa;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 14px;
+        }
+        
+        .players-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        
+        .players-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .player-rank {
+            text-align: center;
+            font-weight: bold;
+            color: #666;
+            width: 40px;
+        }
+        
+        .player-name {
+            font-weight: 500;
+        }
+        
+        .auto-refresh {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #6c5ce7;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        @media (max-width: 768px) {
+            .nav {
+                display: none;
+            }
+            
+            .clans-table, .players-table {
+                font-size: 12px;
+            }
+            
+            .clans-table td, .clans-table th,
+            .players-table td, .players-table th {
+                padding: 8px 6px;
+            }
+            
+            .clan-stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <span class="top">TOP</span> <span class="req">REQ</span> <span class="clans">CLANS</span>
+        </div>
+        <nav class="nav">
+            <a href="#">Level</a>
+            <a href="#" style="color: white;">Clans ▼</a>
+            <a href="#">Players ▼</a>
+            <a href="#">Contact</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="main-view" id="mainView">
+            <h1 class="page-title">Top Req Clans - Current season</h1>
+            <p class="update-info">Clan data is updated 24/7! (Last updated: <span id="lastUpdate">Loading...</span>)</p>
+            
+            <table class="clans-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Clan</th>
+                        <th>Leader</th>
+                        <th style="text-align: right;">Total Donate</th>
+                        <th style="text-align: right;">Received ▲</th>
+                    </tr>
+                </thead>
+                <tbody id="clansTableBody">
+                    <!-- Los clanes se cargarán aquí -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="clan-detail-view" id="clanDetailView">
+            <button class="back-button" onclick="showMainView()">← Back to Clans</button>
+            
+            <div class="clan-header">
+                <div class="clan-name" id="detailClanName">Clan Name</div>
+                <div class="clan-stats">
+                    <span>Leader: <span id="detailLeader">Leader</span></span>
+                    <span>Members: <span id="detailMembers">0</span></span>
+                    <span>Total Donations: <span id="detailTotalDonations">0</span></span>
+                </div>
+            </div>
+            
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="showPlayersTab('total')" id="totalDonationsBtn">
+                    Donaciones Totales
+                </button>
+                <button class="tab-button" onclick="showPlayersTab('daily')" id="dailyDonationsBtn">
+                    Donaciones Diarias
+                </button>
+            </div>
+            
+            <table class="players-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Player</th>
+                        <th style="text-align: right;">Donaciones</th>
+                        <th style="text-align: right;">Recibidas</th>
+                        <th style="text-align: right;">Trofeos</th>
+                    </tr>
+                </thead>
+                <tbody id="playersTableBody">
+                    <!-- Los jugadores se cargarán aquí -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="auto-refresh" id="autoRefresh">
+        🔄 Next update in: <span id="countdown">120</span>s
+    </div>
+
+    <script>
+        var currentData = {};
+        var currentView = 'total';
+        var selectedClanTag = '';
+        var refreshInterval;
+        var countdownInterval;
+        var secondsLeft = 120;
+        
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(3) + '';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(3) + '';
+            }
+            return num.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ".");
+        }
+        
+        function updateLastUpdateTime() {
+            var now = new Date();
+            document.getElementById('lastUpdate').textContent = 'hace 1 seg';
+        }
+        
+        function startCountdown() {
+            countdownInterval = setInterval(function() {
+                secondsLeft--;
+                document.getElementById('countdown').textContent = secondsLeft;
+                
+                if (secondsLeft <= 0) {
+                    secondsLeft = 120;
+                }
+            }, 1000);
+        }
+        
+        function loadClansRanking() {
+            fetch('/api/ranking')
+            .then(function(response) { return response.json(); })
+            .then(function(ranking) {
+                var tbody = document.getElementById('clansTableBody');
+                tbody.innerHTML = '';
+                
+                ranking.forEach(function(clan) {
+                    var row = document.createElement('tr');
+                    row.onclick = function() { showClanDetail(clan.tag); };
+                    
+                    var clanInitial = clan.name.charAt(0).toUpperCase();
+                    
+                    row.innerHTML = 
+                        '<td class="clan-rank">' + clan.rank + '.</td>' +
+                        '<td class="clan-info">' +
+                            '<div class="clan-badge">' + clanInitial + '</div>' +
+                            '<div class="clan-details">' +
+                                '<h4>' + clan.name + '</h4>' +
+                                '<div class="clan-tag">#' + clan.tag + '</div>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td class="leader-name">' + clan.leader + '</td>' +
+                        '<td class="donations-number">' + formatNumber(clan.totalDonations) + '</td>' +
+                        '<td class="received-number">' + formatNumber(clan.totalReceived) + '</td>';
+                    
+                    tbody.appendChild(row);
+                });
+                
+                updateLastUpdateTime();
+                secondsLeft = 120;
+            })
+            .catch(function(error) {
+                console.error('Error loading clans:', error);
+            });
+        }
+        
+        function showClanDetail(clanTag) {
+            selectedClanTag = clanTag;
+            
+            fetch('/api/clan/' + encodeURIComponent(clanTag))
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                currentData = data;
+                
+                document.getElementById('mainView').style.display = 'none';
+                document.getElementById('clanDetailView').style.display = 'block';
+                
+                document.getElementById('detailClanName').textContent = data.name;
+                document.getElementById('detailLeader').textContent = data.leader;
+                document.getElementById('detailMembers').textContent = data.members;
+                document.getElementById('detailTotalDonations').textContent = formatNumber(data.totalDonations);
+                
+                showPlayersTab('total');
+            })
+            .catch(function(error) {
+                console.error('Error loading clan details:', error);
+            });
+        }
+        
+        function showMainView() {
+            document.getElementById('mainView').style.display = 'block';
+            document.getElementById('clanDetailView').style.display = 'none';
+            selectedClanTag = '';
+        }
+        
+        function showPlayersTab(tabType) {
+            currentView = tabType;
+            
+            document.getElementById('totalDonationsBtn').classList.remove('active');
+            document.getElementById('dailyDonationsBtn').classList.remove('active');
+            document.getElementById(tabType === 'total' ? 'totalDonationsBtn' : 'dailyDonationsBtn').classList.add('active');
+            
+            if (!currentData.memberList) return;
+            
+            var players = currentData.memberList.slice();
+            
+            players.sort(function(a, b) {
+                var aValue = tabType === 'total' ? (a.donations || 0) : (a.dailyDonations || 0);
+                var bValue = tabType === 'total' ? (b.donations || 0) : (b.dailyDonations || 0);
+                return bValue - aValue;
+            });
+            
+            var tbody = document.getElementById('playersTableBody');
+            tbody.innerHTML = '';
+            
+            players.forEach(function(player, index) {
+                var donations = tabType === 'total' ? player.donations : player.dailyDonations;
+                
+                var row = document.createElement('tr');
+                row.innerHTML = 
+                    '<td class="player-rank">' + (index + 1) + '.</td>' +
+                    '<td class="player-name">' + player.name + '</td>' +
+                    '<td style="text-align: right; font-weight: 600; color: #2e7d32;">' + formatNumber(donations) + '</td>' +
+                    '<td style="text-align: right; font-weight: 600; color: #d32f2f;">' + formatNumber(player.donationsReceived) + '</td>' +
+                    '<td style="text-align: right;">' + formatNumber(player.trophies) + '</td>';
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function resetDailyDonations() {
+            var now = new Date();
+            var argentina = new Date(now.toLocaleString("en-US", {timeZone: "America/Argentina/Buenos_Aires"}));
+            
+            if (argentina.getHours() === 2 && argentina.getMinutes() === 0 && argentina.getSeconds() < 5) {
+                console.log('🌙 Reseteando donaciones diarias a las 2 AM Argentina...');
+                // Aquí se resetearían las donaciones diarias en el servidor real
+            }
+        }
+        
+        function startAutoRefresh() {
+            refreshInterval = setInterval(function() {
+                if (document.getElementById('mainView').style.display !== 'none') {
+                    loadClansRanking();
+                } else if (selectedClanTag) {
+                    showClanDetail(selectedClanTag);
+                }
+                resetDailyDonations();
+            }, 120000); // 2 minutos
+        }
+        
+        window.onload = function() { 
+            loadClansRanking();
+            startAutoRefresh();
+            startCountdown();
+        };
+        
+        window.onbeforeunload = function() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            if (countdownInterval) clearInterval(countdownInterval);
+        };
+    </script>
+</body>
+</html>'''
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/" or self.path == "/index.html":
+            self.send_response(200)
+            self.send_header("Content-type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(HTML_PAGE.encode('utf-8'))
+            
+        elif self.path == "/api/ranking":
+            ranking = process_clans_ranking()
+            self.send_response(200)
+            self.send_header("Content-type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps(ranking).encode('utf-8'))
+            
+        elif self.path.startswith("/api/clan/"):
+            clan_tag = urllib.parse.unquote(self.path.split("/")[-1])
+            clan_data = get_clan_data(clan_tag)
+            
+            self.send_response(200)
+            self.send_header("Content-type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps(clan_data).encode('utf-8'))
+            
+        else:
+            self.send_response(404)
+            self.end_headers()
+    
+    def log_message(self, format, *args):
+        # Silencia los logs del servidor
+        pass
+
+def main():
+    print("🚀 Iniciando TOP REQ CLANS Server...")
+    print(f"📱 Abre tu navegador en: http://localhost:{PORT}")
+    print("⏰ Auto-refresh cada 2 minutos")
+    print("🌙 Reset donaciones diarias: 2:00 AM Argentina")
+    print("🔄 Presiona Ctrl+C para detener el servidor")
+    print("-" * 50)
+    
+    try:
+        with socketserver.TCPServer(("", PORT), Handler) as httpd:
+            print("✅ ¡Servidor funcionando!")
+            httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n👋 Servidor detenido")
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
+if __name__ == "__main__":
+    main()
+chmod +x clash_server.py
+
+rm clash_server.py

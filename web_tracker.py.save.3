@@ -1,0 +1,148 @@
+import requests
+import json
+import time
+from datetime import datetime
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+
+# Configuración
+API_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6IjQ0MmM5NDI3LWRmZWUtNDUzOS05YzM3LTY0YTI4ZWQ3NWQ2YSIsImlhdCI6MTc1NDc4NzA4NCwic3ViIjoiZGV2ZWxvcGVyL2ZjNTE2YWY0LTA4YzUtYTUwYS1iNjA1LTA0NWJiN2Y2MWYxNyIsInNjb3BlcyI6WyJjbGFzaCJdLCJsaW1pdHMiOlt7InRpZXIiOiJkZXZlbG9wZXIvc2lsdmVyIiwidHlwZSI6InRocm90dGxpbmcifSx7ImNpZHJzIjpbIjE5MC40OC4xMTkuMTAwIl0sInR5cGUiOiJjbGllbnQifV19.wX0TqtjSP7HUxVs9cvopoFZk_5wp-fG70HOrQaF-EOBKgUUBYXySAU7GMfnOx8ivnqB3qgKv-Urb_S79dBEpQw"
+CLAN_TAG = "22G8YL992"
+
+# Variables globales
+clan_data = {}
+last_update = ""
+
+def obtener_datos():
+    global clan_data, last_update
+    try:
+        headers = {
+            'Authorization': f'Bearer {API_TOKEN}',
+            'Accept': 'application/json'
+        }
+        
+        url = f"https://api.clashofclans.com/v1/clans/%23{CLAN_TAG}"
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            clan_data = response.json()
+            last_update = datetime.now().strftime("%H:%M:%S")
+            print(f"✅ Datos actualizados: {last_update}")
+            return True
+        else:
+            print(f"❌ Error API: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def generar_pagina():
+    if not clan_data:
+        return "<h1>🔄 Cargando datos del clan...</h1>"
+    
+    members = sorted(clan_data.get('memberList', []), key=lambda x: x.get('donations', 0), reverse=True)
+    total_donations = sum(m.get('donations', 0) for m in members)
+    max_donations = max((m.get('donations', 0) for m in members), default=0)
+    
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>{clan_data.get('name', 'Clan')} - Donaciones</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{ font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; color: white; }}
+        .container {{ max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; backdrop-filter: blur(10px); }}
+        .header {{ text-align: center; margin-bottom: 30px; }}
+        .clan-name {{ font-size: 2.5em; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }}
+        .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }}
+        .stat-card {{ background: rgba(255,255,255,0.2); padding: 20px; border-radius: 15px; text-align: center; }}
+        .stat-number {{ font-size: 2em; font-weight: bold; color: #FFD700; }}
+        .member {{ background: rgba(255,255,255,0.15); padding: 15px; border-radius: 10px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; }}
+        .top3 {{ background: linear-gradient(45deg, #FFD700, #FFA500); color: #000; }}
+        .member-donations {{ font-weight: bold; color: #FFD700; }}
+        .update-info {{ text-align: center; margin-top: 20px; opacity: 0.8; }}
+    </style>
+    <script>setTimeout(function(){{location.reload();}}, 180000);</script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="clan-name">{clan_data.get('name', 'Clan')}</h1>
+            <p>🏆 Nivel {clan_data.get('clanLevel', 'N/A')} | 👥 {len(members)} miembros</p>
+        </div>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">{total_donations:,}</div>
+                <div>Total Donaciones</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{max_donations:,}</div>
+                <div>Máximo Individual</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{clan_data.get('clanPoints', 0):,}</div>
+                <div>Puntos del Clan</div>
+            </div>
+        </div>
+        <div class="members">"""
+    
+    for i, member in enumerate(members, 1):
+        donations = member.get('donations', 0)
+        name = member.get('name', 'Desconocido')
+        
+        extra_class = "top3" if i <= 3 else ""
+        medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else ""
+        
+        html += f"""
+            <div class="member {extra_class}">
+                <div>{i}. {medal} {name}</div>
+                <div class="member-donations">{donations:,}</div>
+            </div>"""
+    
+    html += f"""
+        </div>
+        <div class="update-info">
+            📊 Última actualización: {last_update}<br>
+            🔄 Se actualiza automáticamente cada 3 minutos
+        </div>
+    </div>
+</body>
+</html>"""
+    return html
+
+class ClashHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html; charset=utf-8')
+        self.end_headers()
+        html = generar_pagina()
+        self.wfile.write(html.encode('utf-8'))
+    
+    def log_message(self, format, *args):
+        pass
+
+def actualizar_loop():
+    while True:
+        time.sleep(180)  # 3 minutos
+        obtener_datos()
+
+print("🚀 Iniciando Clash of Clans Tracker...")
+
+if obtener_datos():
+    print("✅ Conexión exitosa con API")
+else:
+    print("❌ Error inicial - verificar API key")
+
+update_thread = threading.Thread(target=actualizar_loop, daemon=True)
+update_thread.start()
+print("🔄 Auto-actualización cada 3 minutos")
+
+server = HTTPServer(('localhost', 8080), ClashHandler)
+print("🌐 Servidor web iniciado en: http://localhost:8080")
+print("💡 Abrí tu navegador y andá a esa dirección")
+
+try:
+    server.serve_forever()
+except KeyboardInterrupt:
+    print("\n🛑 Servidor detenido")

@@ -1,0 +1,55 @@
+{
+  "last_save": "2025-08-29T01:32:17.268793-03:00",
+  "version": "5.1_fixed_api_and_seasons",
+  "total_months": 1,
+  "history": {
+    "2025-08": {
+      "month_key": "2025-08",
+      "month_name": "August 2025",
+      "timestamp": "2025-08-29T01:31:58.066260-03:00",
+      "auto_save_number": 0,
+      "clans": {
+        "22G8YL992": {
+          "name": "req n go (Sin conexión)",
+          "leader": "API Sin Respuesta",
+          "members": 1,
+          "totalDonations": 0,
+          "totalReceived": 0,
+          "last_update": "2025-08-29T01:31:58.066260-03:00",
+          "players": [
+            {
+              "tag": "BACKUP_API",
+              "name": "API no disponible - reintentando...",
+              "donations": 0,
+              "donationsReceived": 0,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 0,
+              "last_update": "2025-08-29T01:31:58.066260-03:00"
+            }
+          ]
+        },
+        "9PCULGVU": {
+          "name": "Mi Nuevo Clan (Sin conexión)",
+          "leader": "API Sin Respuesta",
+          "members": 1,
+          "totalDonations": 0,
+          "totalReceived": 0,
+          "last_update": "2025-08-29T01:31:58.066260-03:00",
+          "players": [
+            {
+              "tag": "BACKUP_API",
+              "name": "API no disponible - reintentando...",
+              "donations": 0,
+              "donationsReceived": 0,
+              "dailyDonations": 0,
+              "dailyReceived": 0,
+              "trophies": 0,
+              "last_update": "2025-08-29T01:31:58.066260-03:00"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "last_save": "2025-08-25T03:10:39.435791-03:00",
+  "version": "5.0_season_recovery",
+  "current_season": "2025-08",
+  "season_start": "2025-08-25T02:31:45.854671-03:00",
+  "total_months": 1,
+  "history": {
+    "2025-08": {
+      "month_key": "2025-08",
+      "month_name": "August 2025",
+      "timestamp": "2025-08-25T03:10:38.133544-03:00",
+      "season_id": "2025-08",
+      "auto_save_number": 0,
+      "clans": {}
+    }
+  }
+}

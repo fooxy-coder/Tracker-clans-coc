@@ -1,0 +1,1216 @@
+#!/usr/bin/env python3
+
+import http.server
+import socketserver
+import urllib.request
+import urllib.parse
+import json
+import os
+import socket
+from datetime import datetime, timezone, timedelta
+import threading
+import time
+
+# Configuración del puerto
+PORT = 8000
+
+# Configuración API Clash of Clans
+API_KEY = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6IjBkNDRiNDBmLTBlNTUtNDQ4NS05MDc1LTNmNjUwYWJiZDVlOCIsImlhdCI6MTc1NTg3NzU1NSwic3ViIjoiZGV2ZWxvcGVyL2ZjNTE2YWY0LTA4YzUtYTUwYS1iNjA1LTA0NWJiN2Y2MWYxNyIsInNjb3BlcyI6WyJjbGFzaCJdLCJsaW1pdHMiOlt7InRpZXIiOiJkZXZlbG9wZXIvc2lsdmVyIiwidHlwZSI6InRocm90dGxpbmcifSx7ImNpZHJzIjpbIjIwMS4xNzguMjAwLjY0Il0sInR5cGUiOiJjbGllbnQifV19.J-afRMV_afDPPPrel6ZksoO_4q-HB_VDM-02JHl1bshGxFe-aNYMaLfQ4DY6kunhSmbo5cXL-8hWz8zmkkJCgg"
+API_BASE_URL = "https://api.clashofclans.com/v1"
+
+# Rate limiting
+API_CALLS_COUNT = 0
+API_CALLS_RESET_TIME = time.time()
+MAX_API_CALLS_PER_MINUTE = 30
+
+# Cache para datos de clanes
+clan_cache = {}
+daily_stats_cache = {}
+last_update = None
+
+# Variables para controlar el reset diario
+last_reset_date = None
+reset_in_progress = False
+reset_lock = threading.Lock()
+
+# NUEVO: Variables para detección de reinicio de temporada
+season_reset_detection = {
+    'last_check': None,
+    'previous_totals': {},  # Almacena totales anteriores de cada clan
+    'reset_threshold': 0.1,  # Si las donaciones bajan más del 90%, es reset
+    'min_clans_for_detection': 2,  # Mínimo de clanes que deben resetear
+    'last_season_save': None,
+    'season_reset_detected': False
+}
+
+# Archivos para persistir datos
+DONATIONS_FILE = "daily_donations.json"
+BACKUP_FILE = "donations_backup.json"
+MONTHLY_HISTORY_FILE = "monthly_history.json"
+SEASON_HISTORY_FILE = "season_history.json"  # NUEVO: Archivo para historial de temporadas
+
+# Variable global para el historial mensual y de temporadas
+monthly_history = {}
+season_history = {}  # NUEVO: Historial de temporadas
+auto_save_counter = 0
+
+def should_make_api_call():
+    """Check if we can make an API call based on rate limits"""
+    global API_CALLS_COUNT, API_CALLS_RESET_TIME
+    
+    current_time = time.time()
+    
+    # Reset counter every minute
+    if current_time - API_CALLS_RESET_TIME > 60:
+        API_CALLS_COUNT = 0
+        API_CALLS_RESET_TIME = current_time
+    
+    # Check if we're under the limit
+    if API_CALLS_COUNT >= MAX_API_CALLS_PER_MINUTE:
+        print(f"⏸️ API rate limit reached ({API_CALLS_COUNT}/{MAX_API_CALLS_PER_MINUTE})")
+        return False
+    
+    return True
+
+def increment_api_call_count():
+    """Increment API call counter"""
+    global API_CALLS_COUNT
+    API_CALLS_COUNT += 1
+
+# NUEVO: Funciones para detección de reinicio de temporada
+def save_season_history():
+    """Guarda el historial de temporadas en archivo"""
+    try:
+        argentina_tz = timezone(timedelta(hours=-3))
+        now_argentina = datetime.now(argentina_tz)
+        
+        data_to_save = {
+            'last_save': now_argentina.isoformat(),
+            'version': '5.0_season_detection',
+            'total_seasons': len(season_history),
+            'last_season_reset': season_reset_detection.get('last_season_save'),
+            'detection_config': {
+                'reset_threshold': season_reset_detection['reset_threshold'],
+                'min_clans_for_detection': season_reset_detection['min_clans_for_detection']
+            },
+            'history': season_history
+        }
+        
+        # Crear respaldo antes de guardar
+        if os.path.exists(SEASON_HISTORY_FILE):
+            backup_name = f"season_history_backup_{now_argentina.strftime('%Y%m%d_%H%M%S')}.json"
+            import shutil
+            shutil.copy2(SEASON_HISTORY_FILE, backup_name)
+        
+        with open(SEASON_HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data_to_save, f, ensure_ascii=False, indent=2)
+        
+        print(f"🏆 Historial de temporadas guardado - {len(season_history)} temporadas totales")
+        return True
+    except Exception as e:
+        print(f"❌ Error guardando historial de temporadas: {e}")
+        return False
+
+def load_season_history():
+    """Carga el historial de temporadas desde archivo"""
+    global season_history
+    
+    try:
+        if os.path.exists(SEASON_HISTORY_FILE):
+            with open(SEASON_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            if isinstance(data, dict) and 'history' in data:
+                season_history = data['history']
+                
+                # Cargar configuración de detección si existe
+                if 'detection_config' in data:
+                    config = data['detection_config']
+                    season_reset_detection.update(config)
+                
+                if 'last_season_reset' in data:
+                    season_reset_detection['last_season_save'] = data['last_season_reset']
+                
+                print(f"🏆 Historial de temporadas cargado - {len(season_history)} temporadas disponibles")
+            else:
+                season_history = data if isinstance(data, dict) else {}
+                print(f"🏆 Historial de temporadas cargado (formato antiguo) - {len(season_history)} temporadas")
+        else:
+            season_history = {}
+            print("🏆 Creando nuevo archivo de historial de temporadas")
+    except Exception as e:
+        print(f"❌ Error cargando historial de temporadas: {e}")
+        season_history = {}
+
+def detect_season_reset():
+    """Detecta si hubo un reinicio de temporada de Clash of Clans"""
+    global season_reset_detection, season_history
+    
+    try:
+        argentina_tz = timezone(timedelta(hours=-3))
+        now_argentina = datetime.now(argentina_tz)
+        
+        # Evitar chequeos muy frecuentes (máximo cada 10 minutos)
+        if (season_reset_detection['last_check'] and 
+            (now_argentina - season_reset_detection['last_check']).total_seconds() < 600):
+            return False
+        
+        season_reset_detection['last_check'] = now_argentina
+        
+        clans = load_clans()
+        current_totals = {}
+        reset_detected_clans = []
+        
+        print(f"🔍 Verificando posible reinicio de temporada...")
+        
+        # Obtener donaciones actuales de todos los clanes
+        for clan_tag in clans.keys():
+            try:
+                clan_data = get_clan_data_from_cache_or_api(clan_tag)
+                if not clan_data:
+                    continue
+                
+                current_total = clan_data.get('totalDonations', 0)
+                current_totals[clan_tag] = current_total
+                
+                # Comparar con totales anteriores
+                if clan_tag in season_reset_detection['previous_totals']:
+                    previous_total = season_reset_detection['previous_totals'][clan_tag]
+                    
+                    # Calcular porcentaje de reducción
+                    if previous_total > 1000:  # Solo considerar clanes con donaciones significativas
+                        reduction_ratio = current_total / previous_total
+                        
+                        if reduction_ratio <= season_reset_detection['reset_threshold']:
+                            reset_detected_clans.append({
+                                'clan_tag': clan_tag,
+                                'clan_name': clan_data.get('name', 'Unknown'),
+                                'previous_total': previous_total,
+                                'current_total': current_total,
+                                'reduction_ratio': reduction_ratio
+                            })
+                            
+                            print(f"🚨 Posible reset detectado en {clan_data.get('name', clan_tag)}: "
+                                  f"{previous_total:,} → {current_total:,} "
+                                  f"({reduction_ratio:.2%})")
+            
+            except Exception as e:
+                print(f"❌ Error verificando clan {clan_tag} para reset: {e}")
+        
+        # Determinar si es un reset de temporada
+        season_reset_detected = len(reset_detected_clans) >= season_reset_detection['min_clans_for_detection']
+        
+        if season_reset_detected and not season_reset_detection['season_reset_detected']:
+            print(f"🏆 ¡REINICIO DE TEMPORADA DETECTADO!")
+            print(f"📊 {len(reset_detected_clans)} clanes con reset detectado:")
+            for clan_info in reset_detected_clans:
+                print(f"   - {clan_info['clan_name']}: {clan_info['previous_total']:,} → {clan_info['current_total']:,}")
+            
+            # Guardar datos de la temporada anterior
+            season_key = f"season_{now_argentina.strftime('%Y_%m_%d_%H%M')}"
+            success = save_season_end_data(season_key, reset_detected_clans)
+            
+            if success:
+                season_reset_detection['season_reset_detected'] = True
+                season_reset_detection['last_season_save'] = now_argentina.isoformat()
+                
+                # Reset de estadísticas diarias también
+                print("🔄 Ejecutando reset de donaciones diarias automáticamente...")
+                force_daily_reset()
+                
+                print(f"✅ Temporada guardada permanentemente como: {season_key}")
+            else:
+                print("❌ Error guardando datos de fin de temporada")
+        
+        elif not season_reset_detected and season_reset_detection['season_reset_detected']:
+            # Ya no se detecta reset, volver al estado normal
+            season_reset_detection['season_reset_detected'] = False
+            print("✅ Sistema vuelve al estado normal tras reinicio de temporada")
+        
+        # Actualizar totales anteriores para la próxima verificación
+        season_reset_detection['previous_totals'] = current_totals.copy()
+        
+        return season_reset_detected
+        
+    except Exception as e:
+        print(f"❌ Error en detección de reinicio de temporada: {e}")
+        return False
+
+def save_season_end_data(season_key, reset_clans_info):
+    """Guarda los datos del final de una temporada"""
+    try:
+        argentina_tz = timezone(timedelta(hours=-3))
+        now_argentina = datetime.now(argentina_tz)
+        
+        clans = load_clans()
+        season_data = {
+            'season_key': season_key,
+            'season_name': f"Temporada {now_argentina.strftime('%B %Y')}",
+            'end_timestamp': now_argentina.isoformat(),
+            'reset_detected_clans': len(reset_clans_info),
+            'reset_detection_info': reset_clans_info,
+            'detection_method': 'automatic_donation_drop',
+            'clans': {}
+        }
+        
+        total_players_saved = 0
+        
+        # Guardar datos de todos los clanes al final de la temporada
+        for clan_tag in clans.keys():
+            try:
+                # Usar datos del historial mensual actual si está disponible
+                current_month_key = now_argentina.strftime("%Y-%m")
+                if current_month_key in monthly_history and clan_tag in monthly_history[current_month_key]['clans']:
+                    clan_data = monthly_history[current_month_key]['clans'][clan_tag]
+                    season_data['clans'][clan_tag] = {
+                        'name': clan_data['name'],
+                        'leader': clan_data['leader'],
+                        'members': clan_data['members'],
+                        'final_donations': clan_data['totalDonations'],
+                        'final_received': clan_data['totalReceived'],
+                        'players': clan_data['players'],
+                        'data_source': 'monthly_history'
+                    }
+                    total_players_saved += len(clan_data.get('players', []))
+                else:
+                    # Obtener datos en tiempo real
+                    clan_data = get_clan_data_from_cache_or_api(clan_tag)
+                    if clan_data and clan_data.get('memberList'):
+                        clan_players = []
+                        for member in clan_data['memberList']:
+                            player_data = {
+                                'tag': member.get('tag', ''),
+                                'name': member.get('name', 'Unknown'),
+                                'donations': member.get('donations', 0),
+                                'donationsReceived': member.get('donationsReceived', 0),
+                                'dailyDonations': member.get('dailyDonations', 0),
+                                'dailyReceived': member.get('dailyReceived', 0),
+                                'trophies': member.get('trophies', 0),
+                                'final_snapshot': now_argentina.isoformat()
+                            }
+                            clan_players.append(player_data)
+                        
+                        season_data['clans'][clan_tag] = {
+                            'name': clan_data.get('name', 'Unknown Clan'),
+                            'leader': clan_data.get('leader', 'Unknown'),
+                            'members': clan_data.get('members', 0),
+                            'final_donations': clan_data.get('totalDonations', 0),
+                            'final_received': clan_data.get('totalReceived', 0),
+                            'players': clan_players,
+                            'data_source': 'real_time_api'
+                        }
+                        total_players_saved += len(clan_players)
+                
+            except Exception as e:
+                print(f"❌ Error guardando datos de temporada para clan {clan_tag}: {e}")
+        
+        # Guardar en el historial de temporadas
+        season_history[season_key] = season_data
+        
+        if save_season_history():
+            print(f"🏆 Datos de fin de temporada guardados - {total_players_saved} jugadores en {len(season_data['clans'])} clanes")
+            
+            # También guardar una copia en el historial mensual con marca especial
+            monthly_history[f"{season_key}_END"] = {
+                'month_key': f"{season_key}_END",
+                'month_name': f"FIN DE TEMPORADA - {season_data['season_name']}",
+                'timestamp': now_argentina.isoformat(),
+                'season_end': True,
+                'season_key': season_key,
+                'clans': season_data['clans']
+            }
+            save_monthly_history()
+            
+            return True
+        else:
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error guardando datos de fin de temporada: {e}")
+        return False
+
+def get_season_history_list():
+    """Obtiene la lista de temporadas disponibles en el historial"""
+    try:
+        seasons = []
+        for season_key in sorted(season_history.keys(), reverse=True):
+            season_data = season_history[season_key]
+            total_players = sum(len(clan_data.get('players', [])) for clan_data in season_data.get('clans', {}).values())
+            
+            seasons.append({
+                'key': season_key,
+                'name': season_data.get('season_name', season_key),
+                'end_timestamp': season_data.get('end_timestamp', ''),
+                'clans_count': len(season_data.get('clans', {})),
+                'players_count': total_players,
+                'reset_detected_clans': season_data.get('reset_detected_clans', 0),
+                'detection_method': season_data.get('detection_method', 'manual')
+            })
+        return seasons
+    except Exception as e:
+        print(f"❌ Error obteniendo lista de temporadas: {e}")
+        return []
+
+def get_season_data(season_key):
+    """Obtiene los datos de una temporada específica"""
+    try:
+        if season_key not in season_history:
+            return None
+        return season_history[season_key]
+    except Exception as e:
+        print(f"❌ Error obteniendo datos de la temporada {season_key}: {e}")
+        return None
+
+def save_monthly_history():
+    """Guarda el historial mensual en archivo"""
+    try:
+        argentina_tz = timezone(timedelta(hours=-3))
+        now_argentina = datetime.now(argentina_tz)
+        
+        data_to_save = {
+            'last_save': now_argentina.isoformat(),
+            'version': '5.0_with_season_detection',
+            'total_months': len(monthly_history),
+            'history': monthly_history
+        }
+        
+        # Crear respaldo antes de guardar
+        if os.path.exists(MONTHLY_HISTORY_FILE):
+            backup_name = f"monthly_history_backup_{now_argentina.strftime('%Y%m%d_%H%M%S')}.json"
+            import shutil
+            shutil.copy2(MONTHLY_HISTORY_FILE, backup_name)
+        
+        with open(MONTHLY_HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data_to_save, f, ensure_ascii=False, indent=2)
+        
+        print(f"📅 Historial mensual guardado - {len(monthly_history)} meses totales")
+        return True
+    except Exception as e:
+        print(f"❌ Error guardando historial mensual: {e}")
+        return False
+
+def load_monthly_history():
+    """Carga el historial mensual desde archivo"""
+    global monthly_history
+    
+    try:
+        if os.path.exists(MONTHLY_HISTORY_FILE):
+            with open(MONTHLY_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            if isinstance(data, dict) and 'history' in data:
+                monthly_history = data['history']
+                print(f"📅 Historial mensual cargado - {len(monthly_history)} meses disponibles")
+            else:
+                monthly_history = data if isinstance(data, dict) else {}
+                print(f"📅 Historial mensual cargado (formato antiguo) - {len(monthly_history)} meses")
+        else:
+            monthly_history = {}
+            print("📅 Creando nuevo archivo de historial mensual")
+    except Exception as e:
+        print(f"❌ Error cargando historial mensual: {e}")
+        monthly_history = {}
+
+def auto_save_current_month_data():
+    """Guarda automáticamente los datos del mes actual"""
+    global auto_save_counter
+    
+    try:
+        argentina_tz = timezone(timedelta(hours=-3))
+        now_argentina = datetime.now(argentina_tz)
+        current_month_key = now_argentina.strftime("%Y-%m")
+        current_month_name = now_argentina.strftime("%B %Y")
+        
+        clans = load_clans()
+        month_data = {
+            'month_key': current_month_key,
+            'month_name': current_month_name,
+            'timestamp': now_argentina.isoformat(),
+            'auto_save_number': auto_save_counter,
+            'season_detection_active': True,  # NUEVO: Marca que tiene detección de temporada
+            'clans': {}
+        }
+        
+        total_players_saved = 0
+        
+        for clan_tag in clans.keys():
+            try:
+                clan_data = get_clan_data_from_cache_or_api(clan_tag)
+                if not clan_data or not clan_data.get('memberList'):
+                    continue
+                
+                clan_players = []
+                for member in clan_data['memberList']:
+                    player_data = {
+                        'tag': member.get('tag', ''),
+                        'name': member.get('name', 'Unknown'),
+                        'donations': member.get('donations', 0),
+                        'donationsReceived': member.get('donationsReceived', 0),
+                        'dailyDonations': member.get('dailyDonations', 0),
+                        'dailyReceived': member.get('dailyReceived', 0),
+                        'trophies': member.get('trophies', 0),
+                        'last_update': now_argentina.isoformat()
+                    }
+                    clan_players.append(player_data)
+                    total_players_saved += 1
+                
+                month_data['clans'][clan_tag] = {
+                    'name': clan_data.get('name', 'Unknown Clan'),
+                    'leader': clan_data.get('leader', 'Unknown'),
+                    'members': clan_data.get('members', 0),
+                    'totalDonations': clan_data.get('totalDonations', 0),
+                    'totalReceived': clan_data.get('totalReceived', 0),
+                    'last_update': now_argentina.isoformat(),
+                    'players': clan_players
+                }
+                
+            except Exception as e:
+                print(f"❌ Error guardando datos mensuales para clan {clan_tag}: {e}")
+        
+        # Siempre actualizar el mes actual
+        monthly_history[current_month_key] = month_data
+        auto_save_counter += 1
+        
+        if save_monthly_history():
+            if auto_save_counter % 20 == 0:  # Log cada 20 saves
+                print(f"💾 Auto-save #{auto_save_counter} - {total_players_saved} jugadores guardados para {current_month_name}")
+            return True
+        else:
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error en auto_save_current_month_data: {e}")
+        return False
+
+def save_current_month_data():
+    """Wrapper para mantener compatibilidad"""
+    return auto_save_current_month_data()
+
+def get_monthly_history_list():
+    """Obtiene la lista de meses disponibles en el historial"""
+    try:
+        months = []
+        for month_key in sorted(monthly_history.keys(), reverse=True):
+            month_data = monthly_history[month_key]
+            total_players = sum(len(clan_data.get('players', [])) for clan_data in month_data.get('clans', {}).values())
+            
+            months.append({
+                'key': month_key,
+                'name': month_data.get('month_name', month_key),
+                'timestamp': month_data.get('timestamp', ''),
+                'clans_count': len(month_data.get('clans', {})),
+                'players_count': total_players,
+                'auto_saves': month_data.get('auto_save_number', 0),
+                'season_end': month_data.get('season_end', False),  # NUEVO: Marca de fin de temporada
+                'season_detection': month_data.get('season_detection_active', False)  # NUEVO
+            })
+        return months
+    except Exception as e:
+        print(f"❌ Error obteniendo lista de meses: {e}")
+        return []
+
+def get_month_data(month_key):
+    """Obtiene los datos de un mes específico"""
+    try:
+        if month_key not in monthly_history:
+            return None
+        return monthly_history[month_key]
+    except Exception as e:
+        print(f"❌ Error obteniendo datos del mes {month_key}: {e}")
+        return None
+
+def save_daily_donations():
+    """Guarda las donaciones diarias en archivo con respaldo automático"""
+    try:
+        if os.path.exists(DONATIONS_FILE):
+            import shutil
+            shutil.copy2(DONATIONS_FILE, BACKUP_FILE)
+        
+        data_to_save = {
+            'last_save': datetime.now().isoformat(),
+            'version': '5.0_season_detection',
+            'last_reset_date': last_reset_date.isoformat() if last_reset_date else None,
+            'season_detection': season_reset_detection,  # NUEVO: Incluir datos de detección
+            'stats': daily_stats_cache
+        }
+        
+        with open(DONATIONS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data_to_save, f, ensure_ascii=False, indent=2)
+        
+        # Auto-save mensual en cada guardado diario
+        auto_save_current_month_data()
+        
+        return True
+    except Exception as e:
+        print(f"❌ Error guardando donaciones: {e}")
+        return False
+
+def load_daily_donations():
+    """Carga las donaciones diarias desde archivo"""
+    global daily_stats_cache, last_reset_date, season_reset_detection
+    
+    def try_load_file(filepath):
+        try:
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                if isinstance(data, dict) and 'stats' in data:
+                    if 'last_reset_date' in data and data['last_reset_date']:
+                        try:
+                            last_reset_date = datetime.fromisoformat(data['last_reset_date'].replace('Z', '+00:00'))
+                        except:
+                            last_reset_date = None
+                    
+                    # NUEVO: Cargar datos de detección de temporada
+                    if 'season_detection' in data:
+                        season_reset_detection.update(data['season_detection'])
+                    
+                    return data['stats']
+                else:
+                    return data
+        except Exception as e:
+            print(f"⚠️ Error leyendo {filepath}: {e}")
+            return None
+
+    loaded_data = try_load_file(DONATIONS_FILE)
+    
+    if loaded_data is None:
+        loaded_data = try_load_file(BACKUP_FILE)
+    
+    if loaded_data is not None:
+        daily_stats_cache = loaded_data
+        print(f"📂 Estadísticas cargadas - {len([k for k in daily_stats_cache.keys() if not k.endswith('_reset')])} jugadores")
+    else:
+        daily_stats_cache = {}
+        last_reset_date = None
+        save_daily_donations()
+
+def force_daily_reset():
+    """Fuerza un reset manual de las donaciones diarias"""
+    global daily_stats_cache, last_reset_date, reset_in_progress
+    
+    with reset_lock:
+        if reset_in_progress:
+            return False
+        reset_in_progress = True
+    
+    try:
+        print("🔄 FORZANDO RESET MANUAL...")
+        
+        # Guardar datos del mes antes del reset
+        print("💾 Guardando datos del mes actual antes del reset...")
+        auto_save_current_month_data()
+        
+        clans = load_clans()
+        reset_count = 0
+        
+        for clan_tag in clans.keys():
+            try:
+                clan_data = get_clan_data_from_cache_or_api(clan_tag)
+                if not clan_data or not clan_data.get('memberList'):
+                    continue
+                    
+                for member in clan_data['memberList']:
+                    member_tag = member.get('tag', '')
+                    cache_key = f"{clan_tag}_{member_tag}"
+                    current_donations = member.get('donations', 0)
+                    current_received = member.get('donationsReceived', 0)
+                    
+                    daily_stats_cache[cache_key] = {
+                        'last_total_donations': current_donations,
+                        'last_total_received': current_received,
+                        'daily_donations': 0,
+                        'daily_received': 0,
+                        'last_update': datetime.now().isoformat(),
+                        'manual_reset': True,
+                        'reset_timestamp': datetime.now().isoformat()
+                    }
+                    
+                    reset_count += 1
+            
+            except Exception as e:
+                print(f"❌ Error en reset para clan {clan_tag}: {e}")
+        
+        last_reset_date = datetime.now()
+        
+        if save_daily_donations():
+            print(f"✅ Reset manual completado - {reset_count} jugadores")
+            return True
+        else:
+            return False
+    
+    finally:
+        reset_in_progress = False
+
+def load_clans():
+    """Devuelve la lista de clanes a monitorear"""
+    return {
+        "22G8YL992": "req n go",
+        "9PCULGVU": "Mi Nuevo Clan"
+    }
+
+def make_api_request(endpoint):
+    """Realiza una petición a la API de Clash of Clans con rate limiting"""
+    if not should_make_api_call():
+        return None
+        
+    try:
+        url = f"{API_BASE_URL}/{endpoint}"
+        headers = {
+            'Authorization': f'Bearer {API_KEY}',
+            'Accept': 'application/json',
+            'User-Agent': 'ClashTracker/5.0'
+        }
+        
+        increment_api_call_count()
+        req = urllib.request.Request(url, headers=headers)
+        
+        with urllib.request.urlopen(req, timeout=10) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode('utf-8'))
+                return data
+            else:
+                print(f"❌ API Error: Status {response.status}")
+                return None
+                
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            print("⏰ Rate limit hit - waiting...")
+            time.sleep(5)
+        return None
+    except Exception as e:
+        print(f"❌ API Error: {str(e)}")
+        return None
+
+def calculate_daily_stats(clan_tag, member_tag, current_donations, current_received):
+    """Calcula donaciones Y tropas recibidas diarias"""
+    global daily_stats_cache
+    
+    argentina_tz = timezone(timedelta(hours=-3))
+    now_argentina = datetime.now(argentina_tz)
+    cache_key = f"{clan_tag}_{member_tag}"
+    
+    if cache_key not in daily_stats_cache:
+        daily_stats_cache[cache_key] = {
+            'last_total_donations': current_donations,
+            'last_total_received': current_received,
+            'daily_donations': 0,
+            'daily_received': 0,
+            'last_update': now_argentina.isoformat(),
+            'created': now_argentina.isoformat()
+        }
+        return 0, 0
+
+    cache_data = daily_stats_cache[cache_key]
+    last_total_donations = cache_data.get('last_total_donations', current_donations)
+    last_total_received = cache_data.get('last_total_received', current_received)
+    daily_donations = cache_data.get('daily_donations', 0)
+    daily_received = cache_data.get('daily_received', 0)
+
+    # Detectar reset del juego
+    if current_donations < last_total_donations - 50:
+        daily_stats_cache[cache_key].update({
+            'last_total_donations': current_donations,
+            'last_total_received': current_received,
+            'daily_donations': 0,
+            'daily_received': 0,
+            'last_update': now_argentina.isoformat(),
+            'game_reset': True
+        })
+        return 0, 0
+
+    # Calcular diferencias
+    donations_diff = max(0, current_donations - last_total_donations)
+    received_diff = max(0, current_received - last_total_received)
+
+    if donations_diff > 0 or received_diff > 0:
+        daily_donations += donations_diff
+        daily_received += received_diff
+
+        daily_stats_cache[cache_key].update({
+            'last_total_donations': current_donations,
+            'last_total_received': current_received,
+            'daily_donations': daily_donations,
+            'daily_received': daily_received,
+            'last_update': now_argentina.isoformat()
+        })
+
+    return daily_donations, daily_received
+
+def get_clan_daily_summary(clan_tag):
+    """Calcula el resumen de donaciones diarias del clan"""
+    try:
+        clan_data = get_clan_data_from_cache_or_api(clan_tag)
+        if not clan_data or not clan_data.get('memberList'):
+            return {'total_daily_donations': 0, 'total_daily_received': 0, 'time_until_reset': ''}
+        
+        total_daily_donations = 0
+        total_daily_received = 0
+        
+        for member in clan_data['memberList']:
+            daily_donations = member.get('dailyDonations', 0)
+            daily_received = member.get('dailyReceived', 0)
+            total_daily_donations += daily_donations
+            total_daily_received += daily_received
+        
+        # Calcular tiempo hasta el reset
+        argentina_tz = timezone(timedelta(hours=-3))
+        now_argentina = datetime.now(argentina_tz)
+        
+        if now_argentina.hour >= 2:
+            next_reset = now_argentina.replace(hour=2, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        else:
+            next_reset = now_argentina.replace(hour=2, minute=0, second=0, microsecond=0)
+        
+        time_diff = next_reset - now_argentina
+        hours = int(time_diff.seconds // 3600)
+        minutes = int((time_diff.seconds % 3600) // 60)
+        seconds = int(time_diff.seconds % 60)
+        
+        time_until_reset = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        
+        return {
+            'total_daily_donations': total_daily_donations,
+            'total_daily_received': total_daily_received,
+            'time_until_reset': time_until_reset
+        }
+        
+    except Exception as e:
+        print(f"❌ Error calculando resumen diario: {e}")
+        return {'total_daily_donations': 0, 'total_daily_received': 0, 'time_until_reset': ''}
+
+def get_clan_data_from_cache_or_api(clan_tag):
+    """Get clan data from cache first, then API if needed"""
+    global clan_cache
+    
+    # Check cache first (valid for 5 minutes instead of 30 seconds)
+    if clan_tag in clan_cache:
+        cache_time = clan_cache[clan_tag]["timestamp"]
+        if (datetime.now() - cache_time).seconds < 300:  # 5 minutes
+            return clan_cache[clan_tag]["data"]
+    
+    # If not in cache or expired, get from API
+    return get_clan_data_from_api(clan_tag)
+
+def get_clan_data_from_api(clan_tag):
+    """Obtiene datos reales del clan desde la API"""
+    global clan_cache
+
+    clean_tag = clan_tag.replace('#', '')
+    
+    try:
+        clan_info = make_api_request(f"clans/%23{clean_tag}")
+        if not clan_info:
+            return get_fallback_clan_data(clan_tag)
+
+        members_info = clan_info.get('memberList', [])
+        total_donations = sum(member.get('donations', 0) for member in members_info)
+        total_received = sum(member.get('donationsReceived', 0) for member in members_info)
+
+        member_list = []
+        for member in members_info:
+            member_tag = member.get('tag', '')
+            member_name = member.get('name', 'Unknown')
+            current_donations = member.get('donations', 0)
+            current_received = member.get('donationsReceived', 0)
+
+            daily_donations, daily_received = calculate_daily_stats(
+                clean_tag, member_tag, current_donations, current_received
+            )
+
+            member_list.append({
+                "tag": member_tag,
+                "name": member_name,
+                "donations": current_donations,
+                "donationsReceived": current_received,
+                "trophies": member.get('trophies', 0),
+                "dailyDonations": daily_donations,
+                "dailyReceived": daily_received
+            })
+
+        # Find leader
+        leader_name = "Unknown"
+        for member in members_info:
+            if member.get('role') == 'leader':
+                leader_name = member.get('name', 'Unknown')
+                break
+
+        clan_data = {
+            "name": clan_info.get('name', 'Unknown Clan'),
+            "members": clan_info.get('members', 0),
+            "leader": leader_name,
+            "totalDonations": total_donations,
+            "totalReceived": total_received,
+            "memberList": member_list,
+            "level": clan_info.get('clanLevel', 1),
+            "points": clan_info.get('clanPoints', 0)
+        }
+
+        # Update cache with longer expiration
+        clan_cache[clan_tag] = {
+            "data": clan_data,
+            "timestamp": datetime.now()
+        }
+
+        return clan_data
+
+    except Exception as e:
+        print(f"❌ Error obteniendo datos del clan: {str(e)}")
+        return get_fallback_clan_data(clan_tag)
+
+def get_fallback_clan_data(clan_tag):
+    """Datos de respaldo si la API falla"""
+    clans = load_clans()
+    clan_name = clans.get(clan_tag, f"Clan #{clan_tag}")
+
+    return {
+        "name": clan_name,  
+        "members": 1,
+        "leader": "Leader Respaldo",
+        "totalDonations": 0,
+        "totalReceived": 0,
+        "memberList": [
+            {
+                "tag": "BACKUP1", 
+                "name": "Datos de respaldo", 
+                "donations": 0, 
+                "donationsReceived": 0, 
+                "trophies": 0, 
+                "dailyDonations": 0,
+                "dailyReceived": 0
+            }
+        ]
+    }
+
+def get_clan_data(clan_tag):
+    """Obtiene datos del clan (cache o API)"""
+    return get_clan_data_from_cache_or_api(clan_tag)
+
+def process_clans_ranking():
+    """Procesa y ordena los clanes por donaciones totales"""
+    clans = load_clans()
+    ranking = []
+
+    rank = 1
+    for clan_tag, clan_name in clans.items():
+        clan_data = get_clan_data(clan_tag)
+        ranking.append({
+            "rank": rank,
+            "tag": clan_tag,
+            "name": clan_data["name"],
+            "leader": clan_data["leader"],
+            "totalDonations": clan_data["totalDonations"],
+            "totalReceived": clan_data["totalReceived"],
+            "members": clan_data["members"]
+        })
+        rank += 1
+
+    ranking.sort(key=lambda x: x["totalDonations"], reverse=True)
+
+    for i, clan in enumerate(ranking):
+        clan["rank"] = i + 1
+
+    global last_update
+    last_update = datetime.now()
+
+    return ranking
+
+def check_daily_reset():
+    """Verifica si es hora de resetear estadísticas diarias"""
+    global daily_stats_cache, last_reset_date, reset_in_progress
+    
+    with reset_lock:
+        if reset_in_progress:
+            return False
+        
+        argentina_tz = timezone(timedelta(hours=-3))
+        now_argentina = datetime.now(argentina_tz)
+        today_date = now_argentina.date()
+        
+        if last_reset_date and last_reset_date.date() >= today_date:
+            return False
+        
+        if not (2 <= now_argentina.hour <= 2 and now_argentina.minute <= 30):
+            return False
+        
+        reset_in_progress = True
+    
+    try:
+        print(f"🌙 RESET AUTOMÁTICO - {now_argentina.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # Guardar datos del mes antes del reset automático
+        print("💾 Guardando datos mensuales antes del reset automático...")
+        auto_save_current_month_data()
+        
+        clans = load_clans()
+        reset_count = 0
+        
+        for clan_tag in clans.keys():
+            try:
+                clan_data = get_clan_data_from_cache_or_api(clan_tag)
+                if not clan_data or not clan_data.get('memberList'):
+                    continue
+                
+                for member in clan_data['memberList']:
+                    member_tag = member.get('tag', '')
+                    cache_key = f"{clan_tag}_{member_tag}"
+                    current_donations = member.get('donations', 0)
+                    current_received = member.get('donationsReceived', 0)
+                    
+                    if cache_key in daily_stats_cache:
+                        daily_stats_cache[cache_key].update({
+                            'last_total_donations': current_donations,
+                            'last_total_received': current_received,
+                            'daily_donations': 0,
+                            'daily_received': 0,
+                            'last_update': now_argentina.isoformat(),
+                            'auto_reset': True,
+                            'reset_time': now_argentina.isoformat()
+                        })
+                    else:
+                        daily_stats_cache[cache_key] = {
+                            'last_total_donations': current_donations,
+                            'last_total_received': current_received,
+                            'daily_donations': 0,
+                            'daily_received': 0,
+                            'last_update': now_argentina.isoformat(),
+                            'auto_reset': True,
+                            'reset_time': now_argentina.isoformat()
+                        }
+                    
+                    reset_count += 1
+            
+            except Exception as e:
+                print(f"❌ Error en reset automático: {e}")
+        
+        last_reset_date = now_argentina
+        
+        if save_daily_donations():
+            print(f"✅ Reset automático completado - {reset_count} jugadores")
+            return True
+        else:
+            return False
+    
+    except Exception as e:
+        print(f"❌ Error en check_daily_reset: {e}")
+        return False
+    
+    finally:
+        reset_in_progress = False
+
+def daily_reset_worker():
+    """Worker thread for daily reset checking"""
+    last_check_date = None
+    
+    while True:
+        try:
+            time.sleep(300)  # Check every 5 minutes
+            
+            argentina_tz = timezone(timedelta(hours=-3))
+            now_argentina = datetime.now(argentina_tz)
+            current_date = now_argentina.date()
+            
+            if last_check_date == current_date:
+                continue
+            
+            if 2 <= now_argentina.hour <= 2 and now_argentina.minute <= 30:
+                if check_daily_reset():
+                    last_check_date = current_date
+                    time.sleep(3600)  # Wait 1 hour after reset
+                    
+        except Exception as e:
+            print(f"❌ Error en monitor de reset: {e}")
+            time.sleep(600)
+
+def auto_backup_worker():
+    """Auto backup every 5 minutes with monthly history"""
+    backup_counter = 0
+    while True:
+        try:
+            time.sleep(300)  # 5 minutes
+            backup_counter += 1
+            
+            if len(daily_stats_cache) > 0:
+                if save_daily_donations():  # This now includes monthly auto-save
+                    if backup_counter % 6 == 0:  # Log every 30 minutes
+                        print(f"💾 Respaldo automático #{backup_counter} completado (incluye historial mensual)")
+            
+        except Exception as e:
+            print(f"❌ Error en sistema de respaldo: {e}")
+            time.sleep(300)
+
+# NUEVO: Worker para detección de temporada
+def season_detection_worker():
+    """Worker thread para detectar reinicio de temporadas"""
+    while True:
+        try:
+            time.sleep(900)  # Check every 15 minutes
+            
+            # Solo verificar durante horas activas para evitar falsos positivos
+            argentina_tz = timezone(timedelta(hours=-3))
+            now_argentina = datetime.now(argentina_tz)
+            
+            # Verificar entre 6 AM y 11 PM para evitar horas de mantenimiento
+            if 6 <= now_argentina.hour <= 23:
+                detect_season_reset()
+            
+        except Exception as e:
+            print(f"❌ Error en detección de temporada: {e}")
+            time.sleep(900)
+
+def auto_update_worker():
+    """Auto update every 3 minutes with monthly saves and season detection"""
+    update_counter = 0
+    
+    while True:
+        try:
+            time.sleep(180)  # 3 minutes
+            update_counter += 1
+            
+            # Clean old cache
+            global clan_cache
+            current_time = datetime.now()
+            clan_cache = {
+                tag: data for tag, data in clan_cache.items()
+                if (current_time - data["timestamp"]).seconds < 600  # 10 minutes
+            }
+
+            # Update and auto-save monthly data every update
+            try:
+                ranking = process_clans_ranking()
+                auto_save_current_month_data()  # Save monthly data every update
+                
+                # NUEVO: Ejecutar detección de temporada cada 5 actualizaciones (15 minutos)
+                if update_counter % 5 == 0:
+                    detect_season_reset()
+                
+                if update_counter % 10 == 0:  # Log every 30 minutes
+                    months_count = len(monthly_history)
+                    seasons_count = len(season_history)
+                    detection_status = "🏆 ACTIVA" if season_reset_detection.get('season_reset_detected') else "🔍 MONITOREANDO"
+                    print(f"🔄 Actualización #{update_counter} - {len(ranking)} clanes - "
+                          f"{months_count} meses - {seasons_count} temporadas - "
+                          f"Detección: {detection_status}")
+            except Exception as e:
+                print(f"❌ Error en actualización: {e}")
+
+        except Exception as e:
+            print(f"❌ Error en actualización automática: {e}")
+            time.sleep(300)
+
+# Clase del manejador HTTP corregida
+class ClashTrackerHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        try:
+            if self.path == "/":
+                self.send_html_response()
+            elif self.path == "/api/clans":
+                self.send_clans_api()
+            elif self.path.startswith("/api/clan/") and self.path.endswith("/daily-summary"):
+                clan_tag = self.path.split("/")[3]
+                self.send_clan_daily_summary(clan_tag)
+            elif self.path.startswith("/api/clan/"):
+                clan_tag = self.path.split("/")[3]
+                self.send_clan_api(clan_tag)
+            elif self.path == "/api/monthly-history":
+                self.send_monthly_history_api()
+            elif self.path.startswith("/api/monthly-history/"):
+                month_key = self.path.split("/")[3]
+                self.send_month_data_api(month_key)
+            elif self.path == "/api/season-history":
+                self.send_season_history_api()
+            elif self.path.startswith("/api/season-history/"):
+                season_key = self.path.split("/")[3]
+                self.send_season_data_api(season_key)
+            elif self.path == "/api/season-status":
+                self.send_season_status_api()
+            else:
+                self.send_404()
+        except Exception as e:
+            print(f"❌ Error en GET request: {e}")
+            self.send_500()
+    
+    def do_POST(self):
+        try:
+            if self.path == "/api/reset-daily":
+                self.handle_reset_daily()
+            else:
+                self.send_404()
+        except Exception as e:
+            print(f"❌ Error en POST request: {e}")
+            self.send_500()
+    
+    def send_html_response(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(HTML_PAGE.encode('utf-8'))
+    
+    def send_json_response(self, data):
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode('utf-8'))
+    
+    def send_clans_api(self):
+        ranking = process_clans_ranking()
+        self.send_json_response(ranking)
+    
+    def send_clan_api(self, clan_tag):
+        clan_data = get_clan_data(clan_tag)
+        self.send_json_response(clan_data)
+    
+    def send_clan_daily_summary(self, clan_tag):
+        summary = get_clan_daily_summary(clan_tag)
+        self.send_json_response(summary)
+    
+    def send_monthly_history_api(self):
+        months = get_monthly_history_list()
+        self.send_json_response(months)
+    
+    def send_month_data_api(self, month_key):
+        month_data = get_month_data(month_key)
+        if month_data:
+            self.send_json_response(month_data)
+        else:
+            self.send_404()
+    
+    def send_season_history_api(self):
+        seasons = get_season_history_list()
+        self.send_json_response(seasons)
+    
+    def send_season_data_api(self, season_key):
+        season_data = get_season_data(season_key)
+        if season_data:
+            self.send_json_response(season_data)
+        else:
+            self.send_404()
+    
+    def send_season_status_api(self):
+        status = {
+            'season_reset_detected': season_reset_detection.get('season_reset_detected', False),
+            'last_check': season_reset_detection.get('last_check'),
+            'last_season_save': season_reset_detection.get('last_season_save'),
+            'total_seasons': len(season_history),
+            'monitoring_active': True
+        }
+        self.send_json_response(status)
+    
+    def handle_reset_daily(self):
+        success = force_daily_reset()
+        self.send_json_response({"success": success})
+    
+    def send_404(self):
+        self.send_response(404)
+        self.end_headers()
+        self.wfile.write(b"404 Not Found")
+    
+    def send_500(self):
+        self.send_response(500)
+        self.end_headers()
+        self.wfile.write(b"500 Internal Server Error")
+    
+    def log_message(self, format, *args):
+        return  # Silenciar logs de requests

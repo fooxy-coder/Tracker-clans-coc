@@ -1,0 +1,615 @@
+#!/usr/bin/env python3
+import http.server
+import socketserver
+import json
+import urllib.request
+import urllib.parse
+import threading
+import time
+from datetime import datetime
+import sys
+import signal
+import json
+import os
+from datetime import datetime
+# Configuración
+API_KEY = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6IjQ0MmM5NDI3LWRmZWUtNDUzOS05YzM3LTY0YTI4ZWQ3NWQ2YSIsImlhdCI6MTc1NDc4NzA4NCwic3ViIjoiZGV2ZWxvcGVyL2ZjNTE2YWY0LTA4YzUtYTUwYS1iNjA1LTA0NWJiN2Y2MWYxNyIsInNjb3BlcyI6WyJjbGFzaCJdLCJsaW1pdHMiOlt7InRpZXIiOiJkZXZlbG9wZXIvc2lsdmVyIiwidHlwZSI6InRocm90dGxpbmcifSx7ImNpZHJzIjpbIjE5MC40OC4xMTkuMTAwIl0sInR5cGUiOiJjbGllbnQifV19.wX0TqtjSP7HUxVs9cvopoFZk_5wp-fG70HOrQaF-EOBKgUUBYXySAU7GMfnOx8ivnqB3qgKv-Urb_S79dBEpQw"
+CLAN_TAG = "#22G8YL992"
+PORT = 3001
+
+# Variables globales
+clan_data = None
+previous_donations = {}
+last_update = None
+server_running = True
+ARCHIVO_DONACIONES = 'donaciones_guardadas.json'
+def signal_handler(sig, frame):
+    global server_running
+    print('\n🛑 Deteniendo servidor...')
+    server_running = False
+    sys.exit(0)
+def cargar_donaciones():
+    """Carga las donaciones guardadas del archivo"""
+    try:
+        if os.path.exists(ARCHIVO_DONACIONES):
+            with open(ARCHIVO_DONACIONES, 'r') as f:
+                return json.load(f)
+    except:
+        pass
+    return {}
+
+def guardar_donaciones(donaciones):
+    """Guarda las donaciones en el archivo"""
+    try:
+        with open(ARCHIVO_DONACIONES, 'w') as f:
+            json.dump(donaciones, f)
+    except:
+        pass
+
+
+
+# HTML de la página
+HTML_PAGE = '''<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOP REQ CLANS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #87CEEB 0%, #E6F3FF 100%);
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(90deg, #FF6B35 0%, #F7931E 50%, #DC143C 100%);
+            color: white; padding: 15px 0; text-align: center;
+        }
+        .header h1 { font-size: 24px; font-weight: bold; letter-spacing: 2px; }
+        .nav-menu {
+            background: rgba(0,0,0,0.8); padding: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .nav-items { display: flex; gap: 20px; }
+        .nav-items a { color: white; text-decoration: none; font-size: 14px; }
+        .container {
+            max-width: 800px; margin: 20px auto; background: white;
+            border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .clan-header {
+            display: flex; align-items: center; padding: 20px; border-bottom: 2px solid #eee;
+        }
+        .clan-badge {
+            width: 80px; height: 80px;
+            background: linear-gradient(45deg, #8B4CB8, #6A1B9A);
+            border-radius: 15px; margin-right: 15px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 24px; cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .clan-badge:hover { transform: scale(1.05); }
+        .clan-info h2 { font-size: 20px; color: #333; margin-bottom: 5px; }
+        .clan-tag { color: #666; font-size: 14px; }
+        .leader-info { text-align: right; flex-grow: 1; }
+        .leader-info h3 { color: #333; font-size: 16px; margin-bottom: 5px; }
+        .leader-tag { color: #666; font-size: 14px; }
+        .stats-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+            background: #ddd; margin: 20px;
+        }
+        .stat-item { background: white; padding: 15px; text-align: center; }
+        .stat-label { font-size: 12px; color: #666; margin-bottom: 5px; }
+        .stat-value { font-size: 18px; font-weight: bold; color: #333; }
+        .status { position: fixed; top: 10px; right: 10px; padding: 5px 10px; border-radius: 15px; z-index: 1000; }
+        .online { background: #4CAF50; color: white; }
+        .offline { background: #f44336; color: white; }
+        .loading { text-align: center; padding: 20px; color: #666; }
+        
+        /* Estilos para el menú emergente */
+        .menu-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 1000;
+        }
+        .menu-content {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 30px; border-radius: 15px; text-align: center; min-width: 300px;
+        }
+        .menu-title { font-size: 24px; color: #333; margin-bottom: 30px; }
+        .menu-button {
+            display: block; width: 100%; padding: 15px; margin: 10px 0;
+            background: linear-gradient(45deg, #8B4CB8, #6A1B9A); color: white; border: none;
+            border-radius: 8px; font-size: 16px; cursor: pointer; transition: transform 0.2s;
+        }
+        .menu-button:hover { transform: translateY(-2px); }
+        .close-btn {
+            position: absolute; top: 10px; right: 15px; background: none; border: none;
+            font-size: 24px; cursor: pointer; color: #999;
+        }
+        
+        /* Estilos para páginas de donaciones */
+        .back-btn {
+            position: fixed; top: 20px; left: 20px; background: rgba(139, 76, 184, 0.9);
+            color: white; border: none; padding: 10px 15px; border-radius: 20px;
+            cursor: pointer; font-size: 14px; z-index: 100;
+        }
+        .hidden { display: none !important; }
+        .donations-section { padding: 20px; }
+        .section-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; text-align: center; }
+        .countdown-timer { text-align: center; color: #666; margin-bottom: 15px; font-size: 14px; }
+        .donation-totals {
+            background: linear-gradient(90deg, #4CAF50, #45a049); color: white; padding: 12px;
+            border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 20px;
+        }
+        .player-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .player-header {
+            background: #f5f5f5; padding: 10px; display: grid;
+            grid-template-columns: 40px 2fr 1fr 1fr; gap: 10px; font-weight: bold;
+            font-size: 12px; color: #666; align-items: center;
+        }
+        .player-row {
+            padding: 12px 10px; display: grid; grid-template-columns: 40px 2fr 1fr 1fr;
+            gap: 10px; align-items: center; border-bottom: 1px solid #eee;
+        }
+        .player-row:last-child { border-bottom: none; }
+        .player-rank { font-weight: bold; color: #333; text-align: center; }
+        .player-name { font-weight: bold; color: #333; }
+        .player-tag { color: #666; font-size: 11px; }
+        .donation-amount { font-weight: bold; color: #333; text-align: right; }
+        .received-amount { color: #666; text-align: right; }
+    </style>
+</head>
+<body>
+    <div id="status" class="status offline">● Conectando...</div>
+    <button class="back-btn hidden" onclick="showHome()">← Volver</button>
+
+    <!-- Página Principal -->
+    <div id="homePage">
+        <div class="header"><h1>TOP REQ CLANS</h1></div>
+        <div class="nav-menu">
+            <div class="nav-items">
+                <a href="#">Level</a><a href="#">Clans ▼</a><a href="#">Players ▼</a><a href="#">Contact</a>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="clan-header">
+                <div class="clan-badge" onclick="showMenu()" title="Hacer click para ver opciones">⚔️</div>
+                <div class="clan-info">
+                    <h2 id="clanName">Cargando...</h2>
+                    <div class="clan-tag">#22G8YL992</div>
+                </div>
+                <div class="leader-info">
+                    <h3>Líder:</h3>
+                    <div id="leaderName">Cargando...</div>
+                    <div class="leader-tag" id="leaderTag">Cargando...</div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Puntos totales (aldea)</div>
+                    <div class="stat-value" id="clanPoints">Cargando...</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Ubicación del clan</div>
+                    <div class="stat-value" id="clanLocation">Cargando...</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Trofeos requeridos</div>
+                    <div class="stat-value" id="requiredTrophies">Cargando...</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Miembros</div>
+                    <div class="stat-value" id="memberCount">Cargando...</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Tipo</div>
+                    <div class="stat-value" id="clanType">Cargando...</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Guerras ganadas</div>
+                    <div class="stat-value" id="warWins">Cargando...</div>
+                </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; margin: 20px; border-radius: 8px; text-align: center;">
+                <h3 style="color: #333; margin-bottom: 10px;">Descripción del clan</h3>
+                <p id="clanDescription" style="color: #666; line-height: 1.4;">Cargando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Página de Donaciones Totales -->
+    <div id="totalDonationsPage" class="hidden">
+        <div class="header"><h1>TOP REQ CLANS</h1></div>
+        <div class="nav-menu">
+            <div class="nav-items">
+                <a href="#">Level</a><a href="#">Clans ▼</a><a href="#">Players ▼</a><a href="#">Contact</a>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="clan-header">
+                <div class="clan-badge">⚔️</div>
+                <div class="clan-info">
+                    <h2 id="clanName2">Requerimientos y licencias</h2>
+                    <div class="clan-tag">#22G8YL992</div>
+                </div>
+                <div class="leader-info">
+                    <h3>Líder:</h3>
+                    <div id="leaderName2">Cargando...</div>
+                    <div class="leader-tag" id="leaderTag2">Cargando...</div>
+                </div>
+            </div>
+
+            <div class="donations-section">
+                <div class="section-title">Donaciones totales de los miembros del clan</div>
+                <div class="countdown-timer">Última actualización: <span id="lastUpdateTotal">Cargando...</span></div>
+
+                <div class="donation-totals">
+                    <div>Donaciones totales: <span id="totalDonated">Cargando...</span></div>
+                    <div>Total recibido: <span id="totalReceived">Cargando...</span></div>
+                </div>
+
+                <div class="player-list">
+                    <div class="player-header">
+                        <div>Rango</div><div>Nombre del jugador</div><div>Donaciones totales ▼</div><div>Total recibido</div>
+                    </div>
+                    <div id="totalPlayersList"><div class="loading">Cargando jugadores...</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Página de Donaciones Diarias -->
+    <div id="dailyDonationsPage" class="hidden">
+        <div class="header"><h1>TOP REQ CLANS</h1></div>
+        <div class="nav-menu">
+            <div class="nav-items">
+                <a href="#">Level</a><a href="#">Clans ▼</a><a href="#">Players ▼</a><a href="#">Contact</a>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="clan-header">
+                <div class="clan-badge">⚔️</div>
+                <div class="clan-info">
+                    <h2>Requerimientos y licencias</h2>
+                    <div class="clan-tag">#22G8YL992</div>
+                </div>
+                <div class="leader-info">
+                    <h3>Líder:</h3>
+                    <div id="leaderName3">Cargando...</div>
+                    <div class="leader-tag" id="leaderTag3">Cargando...</div>
+                </div>
+            </div>
+
+            <div class="donations-section">
+                <div class="section-title">Donaciones diarias de los miembros del clan</div>
+                <div class="countdown-timer">
+                    Tiempo restante para reset (2 AM): <span id="dailyCountdown">Cargando...</span>
+                </div>
+
+                <div class="donation-totals">
+                    <div>Donaciones diarias: <span id="dailyTotalDonated">Cargando...</span></div>
+                    <div>Recibido diario: <span id="dailyTotalReceived">Cargando...</span></div>
+                </div>
+
+                <div class="player-list">
+                    <div class="player-header">
+                        <div>Rango</div><div>Nombre del jugador</div><div>Donaciones diarias ▼</div><div>Recibido diario</div>
+                    </div>
+                    <div id="dailyPlayersList"><div class="loading">Cargando jugadores...</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menú emergente -->
+    <div id="menuOverlay" class="menu-overlay" onclick="hideMenu()">
+        <div class="menu-content" onclick="event.stopPropagation()">
+            <button class="close-btn" onclick="hideMenu()">×</button>
+            <h2 class="menu-title">Opciones del Clan</h2>
+            <button class="menu-button" onclick="showTotalDonations()">Ver Donaciones Totales</button>
+            <button class="menu-button" onclick="showDailyDonations()">Ver Donaciones Diarias</button>
+        </div>
+    </div>
+
+    <script>
+        let clanData = null;
+
+        function showHome() {
+            document.getElementById('homePage').classList.remove('hidden');
+            document.getElementById('totalDonationsPage').classList.add('hidden');
+            document.getElementById('dailyDonationsPage').classList.add('hidden');
+            document.querySelector('.back-btn').classList.add('hidden');
+        }
+
+        function showMenu() { document.getElementById('menuOverlay').style.display = 'block'; }
+        function hideMenu() { document.getElementById('menuOverlay').style.display = 'none'; }
+
+        function showTotalDonations() {
+            hideMenu(); showHome();
+            document.getElementById('homePage').classList.add('hidden');
+            document.getElementById('totalDonationsPage').classList.remove('hidden');
+            document.querySelector('.back-btn').classList.remove('hidden');
+            loadTotalDonations();
+        }
+
+        function showDailyDonations() {
+            hideMenu(); showHome();
+            document.getElementById('homePage').classList.add('hidden');
+            document.getElementById('dailyDonationsPage').classList.remove('hidden');
+            document.querySelector('.back-btn').classList.remove('hidden');
+            loadDailyDonations();
+        }
+
+        async function loadClanData() {
+            try {
+                const response = await fetch('/api/clan');
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                clanData = data;
+                document.getElementById('clanName').textContent = data.name || 'Sin nombre';
+                document.getElementById('clanPoints').textContent = (data.clanPoints || 0).toLocaleString();
+                document.getElementById('clanLocation').textContent = data.location?.name || 'Sin ubicación';
+                document.getElementById('requiredTrophies').textContent = data.requiredTrophies || '0';
+                document.getElementById('memberCount').textContent = data.members || '0';
+                document.getElementById('clanType').textContent = data.type || 'abierto';
+                document.getElementById('warWins').textContent = data.warWins || '0';
+                document.getElementById('clanDescription').textContent = data.description || 'Sin descripción';
+
+                const leader = data.memberList?.find(m => m.role === 'leader');
+                if (leader) {
+                    ['leaderName', 'leaderName2', 'leaderName3'].forEach(id => 
+                        document.getElementById(id).textContent = leader.name);
+                    ['leaderTag', 'leaderTag2', 'leaderTag3'].forEach(id => 
+                        document.getElementById(id).textContent = leader.tag);
+                }
+
+                document.getElementById('status').className = 'status online';
+                document.getElementById('status').textContent = '● Online';
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('status').className = 'status offline';
+                document.getElementById('status').textContent = '● Error';
+            }
+        }
+
+        function loadTotalDonations() {
+            if (!clanData) return;
+            let totalDonated = 0, totalReceived = 0;
+            const playersList = document.getElementById('totalPlayersList');
+            playersList.innerHTML = '';
+
+            const sorted = [...clanData.memberList].sort((a, b) => b.donations - a.donations);
+            sorted.forEach((member, i) => {
+                totalDonated += member.donations;
+                totalReceived += member.donationsReceived;
+                const row = document.createElement('div');
+                row.className = 'player-row';
+                row.innerHTML = `
+                    <div class="player-rank">${i + 1}.</div>
+                    <div><div class="player-name">${member.name}</div><div class="player-tag">${member.tag}</div></div>
+                    <div class="donation-amount">${member.donations.toLocaleString()}</div>
+                    <div class="received-amount">${member.donationsReceived.toLocaleString()}</div>
+                `;
+                playersList.appendChild(row);
+            });
+
+            document.getElementById('totalDonated').textContent = totalDonated.toLocaleString();
+            document.getElementById('totalReceived').textContent = totalReceived.toLocaleString();
+            document.getElementById('lastUpdateTotal').textContent = new Date().toLocaleString();
+        }
+
+        async function loadDailyDonations() {
+            try {
+                const response = await fetch('/api/daily-donations');
+                const dailyData = await response.json();
+                let dailyTotalDonated = 0, dailyTotalReceived = 0;
+                const playersList = document.getElementById('dailyPlayersList');
+                playersList.innerHTML = '';
+
+                const sorted = dailyData.sort((a, b) => b.dailyDonations - a.dailyDonations);
+                sorted.forEach((member, i) => {
+                    dailyTotalDonated += member.dailyDonations;
+                    dailyTotalReceived += member.dailyReceived;
+                    const row = document.createElement('div');
+                    row.className = 'player-row';
+                    row.innerHTML = `
+                        <div class="player-rank">${i + 1}.</div>
+                        <div><div class="player-name">${member.name}</div><div class="player-tag">${member.tag}</div></div>
+                        <div class="donation-amount">${member.dailyDonations.toLocaleString()}</div>
+                        <div class="received-amount">${member.dailyReceived.toLocaleString()}</div>
+                    `;
+                    playersList.appendChild(row);
+                });
+
+                document.getElementById('dailyTotalDonated').textContent = dailyTotalDonated.toLocaleString();
+                document.getElementById('dailyTotalReceived').textContent = dailyTotalReceived.toLocaleString();
+            } catch (error) {
+                console.error('Error loading daily donations:', error);
+                document.getElementById('dailyPlayersList').innerHTML = '<div class="loading">Error cargando datos</div>';
+            }
+        }
+
+        function updateDailyCountdown() {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setHours(2, 0, 0, 0);
+            if (now.getHours() >= 2) tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const timeDiff = tomorrow - now;
+            const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+            const countdown = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            const element = document.getElementById('dailyCountdown');
+            if (element) element.textContent = countdown;
+        }
+
+        loadClanData();
+        setInterval(loadClanData, 120000); // 2 minutos
+        setInterval(updateDailyCountdown, 1000);
+        updateDailyCountdown();
+    </script>
+</body>
+</html>'''
+
+def fetch_clan_data():
+    try:
+        encoded_tag = urllib.parse.quote(CLAN_TAG, safe='')
+        url = f"https://api.clashofclans.com/v1/clans/{encoded_tag}"
+
+        req = urllib.request.Request(url)
+        req.add_header('Authorization', f'Bearer {API_KEY}')
+        req.add_header('Accept', 'application/json')
+
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return json.loads(response.read().decode('utf-8'))
+    except Exception as e:
+        print(f"❌ Error al obtener datos: {e}")
+        return None
+
+def calculate_daily_donations():
+    global clan_data, previous_donations
+    if not clan_data or not clan_data.get('memberList'):
+        return []
+
+    daily_data = []
+    for member in clan_data['memberList']:
+        tag = member['tag']
+        current_donations = member['donations']
+        current_received = member['donationsReceived']
+
+        prev_data = previous_donations.get(tag, {
+            'donations': current_donations,
+            'received': current_received
+        })
+
+        daily_donations = max(0, current_donations - prev_data['donations'])
+        daily_received = max(0, current_received - prev_data['received'])
+
+        daily_data.append({
+            **member,
+            'dailyDonations': daily_donations,
+            'dailyReceived': daily_received
+        })
+    return daily_data
+
+def reset_daily_at_2am():
+    global previous_donations
+    now = datetime.now()
+    if now.hour == 2 and now.minute == 0 and now.second < 5:
+        previous_donations = {}
+        print("🔄 Datos diarios reseteados a las 2 AM")
+
+def data_updater():
+    global clan_data, previous_donations, server_running
+previous_donations = cargar_donaciones()
+    while server_running:
+        try:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] Actualizando datos...")
+            data = fetch_clan_data()
+            if data:
+                clan_data = data
+                print(f"✅ Datos actualizados: {data.get('name', 'Sin nombre')}")
+                print(f"👥 Miembros: {len(data.get('memberList', []))}")
+                
+                # Actualizar datos anteriores para cálculo diario
+                for member in data.get('memberList', []):
+                    tag = member['tag']
+                    if tag not in previous_donations:
+                        previous_donations[tag] = {
+                            'donations': member['donations'],
+                            'received': member['donationsReceived']
+                        }            guardar_donaciones(previous_donations)
+                
+                # Verificar reset diario
+                reset_daily_at_2am()
+            else:
+                print("❌ Error en actualización")
+        except Exception as e:
+            print(f"❌ Error: {e}")
+
+        time.sleep(120)  # 2 minutos
+
+class SimpleHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/' or self.path == '/index.html':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(HTML_PAGE.encode('utf-8'))
+
+        elif self.path == '/api/clan':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.end_headers()
+            if clan_data:
+                response = json.dumps(clan_data, ensure_ascii=False)
+            else:
+                response = json.dumps({"error": "No data available"})
+            self.wfile.write(response.encode('utf-8'))
+
+        elif self.path == '/api/daily-donations':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.end_headers()
+            daily_data = calculate_daily_donations()
+            response = json.dumps(daily_data, ensure_ascii=False)
+            self.wfile.write(response.encode('utf-8'))
+
+        else:
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b'404 - Not Found')
+
+    def log_message(self, format, *args):
+        pass  # Silenciar logs HTTP
+
+def main():
+    print("🚀 Iniciando servidor Clash of Clans...")
+    print(f"📡 Puerto: {3001}")
+    print(f"🏰 Clan: {CLAN_TAG}")
+    print("=" * 40)
+
+    # Datos iniciales
+    print("📊 Cargando datos iniciales...")
+    initial_data = fetch_clan_data()
+    if initial_data:
+        global clan_data
+        clan_data = initial_data
+        print(f"✅ Clan: {clan_data.get('name', 'Sin nombre')}")
+        print(f"👥 Miembros: {len(clan_data.get('memberList', []))}")
+    else:
+        print("❌ Error al cargar datos iniciales")
+
+    # Hilo actualizador
+    updater = threading.Thread(target=data_updater, daemon=True)
+    updater.start()
+
+    # Servidor
+    try:
+        with socketserver.TCPServer(("0.0.0.0", 3001), SimpleHandler) as httpd:
+            print(f"🌐 Servidor activo en: http://localhost:{PORT}")
+            print("✨ Presiona Ctrl+C para detener")
+            print("=" * 40)
+            httpd.serve_forever()
+    except OSError as e:
+        if "Address already in use" in str(e):
+            print(f"❌ Puerto {PORT} ocupado. Intenta con otro puerto.")
+        else:
+            print(f"❌ Error: {e}")
+    except KeyboardInterrupt:
+        print("\n🛑 Servidor detenido")
+
+if __name__ == "__main__":
+    main()
+
+cp clash_server.py clash_server_backup.py
+
+
