@@ -102,3 +102,12 @@ nano clash_server.py
 python clash_server.py
 rm clash_server.py
 nano clash_server.py
+python clash_server.py
+nano clash_server.py
+rm clash_server.py
+nano clash_server.py
+python clash_server.py
+cat python clash_server.py | termux-clipboard-set
+git add .
+git commit -m "Updated API key and port to 8000"
+git push origin main
